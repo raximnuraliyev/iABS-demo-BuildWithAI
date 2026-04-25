@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  tabel_id      String    @id
+  full_name     String
+  password_hash String    @default("")
+  is_head_admin Boolean   @default(false)
+  role_id       String    @db.Uuid
+  role          Role      @relation(fields: [role_id], references: [id])
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique
+  users       User[]
+  permissions RolePermission[]
+}
+
+model RolePermission {
+  id          String  @id @default(uuid()) @db.Uuid
+  role_id     String  @db.Uuid
+  action_name String
+  is_allowed  Boolean @default(false)
+
+  role Role @relation(fields: [role_id], references: [id])
+
+  @@unique([role_id, action_name])
+}
+
+enum CounterpartyType {
+  TENANT
+  LESSOR
+}
+
+model Counterparty {
+  id                 String           @id @default(uuid()) @db.Uuid
+  inn                String           @unique
+  name               String
+  settlement_account String
+  type               CounterpartyType
+
+  leases             Lease[]
+}
+
+enum AssetCategory {
+  PC
+  FURNITURE
+  BUILDING
+  LAND
+  ATM
+}
+
+enum MeasurementUnit {
+  PIECES
+  SQ_METERS
+}
+
+model Asset {
+  id               String          @id @default(uuid()) @db.Uuid
+  name             String
+  category         AssetCategory
+  measurement_unit MeasurementUnit
+
+  leases           Lease[]
+}
+
+enum LeaseDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum LeaseStatus {
+  INTRODUCED
+  APPROVED
+  RETURNED
+}
+
+model Lease {
+  id              String         @id @default(uuid()) @db.Uuid
+  asset_id        String         @db.Uuid
+  counterparty_id String         @db.Uuid
+  lease_direction LeaseDirection
+  status          LeaseStatus    @default(INTRODUCED)
+  contract_amount Decimal        @db.Decimal(15, 2)
+  start_date      DateTime
+  end_date        DateTime
+
+  asset        Asset          @relation(fields: [asset_id], references: [id])
+  counterparty Counterparty   @relation(fields: [counterparty_id], references: [id])
+  
+  memo_orders  MemoOrder[]
+}
+
+model MemoOrder {
+  id                String   @id @default(uuid()) @db.Uuid
+  lease_id          String   @db.Uuid
+  debit_account_20  String   @db.VarChar(20)
+  credit_account_20 String   @db.VarChar(20)
+  amount            Decimal  @db.Decimal(15, 2)
+  generated_at      DateTime @default(now())
+
+  lease Lease @relation(fields: [lease_id], references: [id])
+}
+
+model AuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  tabel_id      String
+  action        String
+  entity_name   String
+  entity_id     String   @db.Uuid
+  previous_data Json?
+  new_data      Json?
+  created_at    DateTime @default(now())
+}
