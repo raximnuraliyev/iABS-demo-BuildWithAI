@@ -1,0 +1,18 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy full application
+COPY . .
+
+# Generate Prisma client (dummy URL — it doesn't connect, just generates the client code)
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate
+
+EXPOSE 3001
+
+# Default command
+CMD ["npx", "tsx", "server/app.ts"]
