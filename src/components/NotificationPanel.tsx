@@ -104,12 +104,12 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                           {log.action.replace(/_/g, ' ')}
                         </p>
                         <p className="text-[10px] text-gray-400 mt-0.5">
-                          {log.tabel_id} • {log.entity_name}
+                          {log.tabel_id} • {log.entity}
                         </p>
                       </div>
                       <span className="text-[10px] text-gray-400 shrink-0 flex items-center gap-1">
                         <Clock size={10} />
-                        {formatTime(log.created_at)}
+                        {formatTime(log.timestamp)}
                       </span>
                     </div>
                   );

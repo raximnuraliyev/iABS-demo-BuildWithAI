@@ -49,23 +49,97 @@ export function fetchDashboardStats() {
   return apiFetch('/dashboard/stats');
 }
 
+// ── Clients ──
+export interface ClientRecord {
+  id: string;
+  code: string;
+  name: string;
+  subject: 'P' | 'J';
+  code_filial: string;
+  inn: string;
+  address: string;
+  phone: string;
+  condition: boolean;
+  accounts?: AccountRecord[];
+}
+
+export function fetchClients(subject?: string, search?: string): Promise<ClientRecord[]> {
+  const params = new URLSearchParams();
+  if (subject) params.set('subject', subject);
+  if (search) params.set('search', search);
+  return apiFetch(`/clients?${params}`);
+}
+
+export function createClient(data: any) {
+  return apiFetch('/clients', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateClient(id: string, data: any) {
+  return apiFetch(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export function deleteClient(id: string) {
+  return apiFetch(`/clients/${id}`, { method: 'DELETE' });
+}
+
+// ── Accounts ──
+export interface AccountRecord {
+  id: string;
+  client_id: string;
+  code: string;
+  code_filial: string;
+  code_coa: string;
+  code_currency: string;
+  client?: ClientRecord;
+}
+
+export function fetchAccounts(client_id?: string): Promise<AccountRecord[]> {
+  const params = new URLSearchParams();
+  if (client_id) params.set('client_id', client_id);
+  return apiFetch(`/accounts?${params}`);
+}
+
+export function createAccount(data: any) {
+  return apiFetch('/accounts', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function deleteAccount(id: string) {
+  return apiFetch(`/accounts/${id}`, { method: 'DELETE' });
+}
+
+// ── CBU Registry ──
+export interface CBURegistryEntry {
+  id: string;
+  coa_code: string;
+  description: string;
+  account_type: 'INCOME' | 'EXPENSE' | 'TRANSIT';
+}
+
+export function fetchCBURegistry(): Promise<CBURegistryEntry[]> {
+  return apiFetch('/cbu-registry');
+}
+
 // ── Leases ──
 export interface LeaseRecord {
   id: string;
-  asset_id: string;
-  counterparty_id: string;
-  lease_direction: 'OUTBOUND' | 'INBOUND';
+  type: 'OUTBOUND' | 'INBOUND';
   status: 'INTRODUCED' | 'APPROVED' | 'RETURNED';
-  contract_amount: string | number;
+  asset_type: string;
+  measurement_unit: string;
+  amount: string | number;
+  tenant_id: string;
+  lessor_id: string;
+  income_expense_account: string;
+  transit_account: string;
   start_date: string;
   end_date: string;
-  asset?: { id: string; name: string; category: string; measurement_unit: string };
-  counterparty?: { id: string; inn: string; name: string; settlement_account: string; type: string };
+  tenant?: ClientRecord;
+  lessor?: ClientRecord;
 }
 
-export function fetchLeases(direction?: string, status?: string): Promise<LeaseRecord[]> {
+export function fetchLeases(type?: string, status?: string): Promise<LeaseRecord[]> {
   const params = new URLSearchParams();
-  if (direction) params.set('direction', direction);
+  if (type) params.set('type', type);
   if (status) params.set('status', status);
   return apiFetch(`/leases?${params}`);
 }
@@ -90,54 +164,21 @@ export function returnLease(id: string) {
   return apiFetch(`/leases/${id}/return`, { method: 'POST' });
 }
 
-export function payLease(id: string, paymentType: string) {
-  return apiFetch(`/leases/${id}/pay`, { method: 'POST', body: JSON.stringify({ payment_type: paymentType }) });
+export function payLease(id: string, mode: string) {
+  return apiFetch(`/leases/${id}/pay`, { method: 'POST', body: JSON.stringify({ mode }) });
 }
 
-// ── Counterparties ──
-export interface Counterparty {
-  id: string;
-  inn: string;
-  name: string;
-  settlement_account: string;
-  type: 'TENANT' | 'LESSOR';
+// ── AI ──
+export function aiCopilot(message: string): Promise<{ response: string }> {
+  return apiFetch('/ai/copilot', { method: 'POST', body: JSON.stringify({ message }) });
 }
 
-export function fetchCounterparties(type?: string): Promise<Counterparty[]> {
-  const params = type ? `?type=${type}` : '';
-  return apiFetch(`/counterparties${params}`);
+export function aiMatchmaker(prompt: string): Promise<{ query: any; results: any[] }> {
+  return apiFetch('/ai/matchmaker', { method: 'POST', body: JSON.stringify({ prompt }) });
 }
 
-export function createCounterparty(data: any) {
-  return apiFetch('/counterparties', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export function updateCounterparty(id: string, data: any) {
-  return apiFetch(`/counterparties/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-}
-
-export function deleteCounterparty(id: string) {
-  return apiFetch(`/counterparties/${id}`, { method: 'DELETE' });
-}
-
-// ── Assets ──
-export interface Asset {
-  id: string;
-  name: string;
-  category: string;
-  measurement_unit: string;
-}
-
-export function fetchAssets(): Promise<Asset[]> {
-  return apiFetch('/assets');
-}
-
-export function createAsset(data: any) {
-  return apiFetch('/assets', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export function deleteAsset(id: string) {
-  return apiFetch(`/assets/${id}`, { method: 'DELETE' });
+export function aiAnalytics(query: string): Promise<{ sql: string; data: any[] }> {
+  return apiFetch('/ai/analytics', { method: 'POST', body: JSON.stringify({ query }) });
 }
 
 // ── Users ──
@@ -185,11 +226,10 @@ export interface AuditLogEntry {
   id: string;
   tabel_id: string;
   action: string;
-  entity_name: string;
+  entity: string;
   entity_id: string;
-  previous_data: any;
-  new_data: any;
-  created_at: string;
+  payload: any;
+  timestamp: string;
 }
 
 export function fetchAuditLogs(entityId?: string, limit?: number): Promise<AuditLogEntry[]> {
@@ -197,4 +237,50 @@ export function fetchAuditLogs(entityId?: string, limit?: number): Promise<Audit
   if (entityId) params.set('entity_id', entityId);
   if (limit) params.set('limit', String(limit));
   return apiFetch(`/audit-logs?${params}`);
+}
+
+// ── Counterparties (legacy compat) ──
+export interface Counterparty {
+  id: string;
+  inn: string;
+  name: string;
+  settlement_account: string;
+  type: 'TENANT' | 'LESSOR';
+}
+
+export function fetchCounterparties(type?: string): Promise<Counterparty[]> {
+  const params = type ? `?type=${type}` : '';
+  return apiFetch(`/counterparties${params}`);
+}
+
+export function createCounterparty(data: any) {
+  return apiFetch('/counterparties', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateCounterparty(id: string, data: any) {
+  return apiFetch(`/counterparties/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export function deleteCounterparty(id: string) {
+  return apiFetch(`/counterparties/${id}`, { method: 'DELETE' });
+}
+
+// ── Assets (legacy compat) ──
+export interface Asset {
+  id: string;
+  name: string;
+  category: string;
+  measurement_unit: string;
+}
+
+export function fetchAssets(): Promise<Asset[]> {
+  return apiFetch('/assets');
+}
+
+export function createAsset(data: any) {
+  return apiFetch('/assets', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function deleteAsset(id: string) {
+  return apiFetch(`/assets/${id}`, { method: 'DELETE' });
 }

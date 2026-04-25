@@ -1,5 +1,5 @@
 import { LeaseRepository } from '../repositories/lease.repository';
-import { LeaseStatus, Prisma } from '@prisma/client';
+import { LeaseStatus, LeaseType, Prisma } from '@prisma/client';
 
 export class LeaseService {
   private repository: LeaseRepository;
@@ -8,10 +8,10 @@ export class LeaseService {
     this.repository = new LeaseRepository();
   }
 
-  async getAllLeases(direction?: string, status?: string) {
-    const filters: any = {};
-    if (direction) filters.lease_direction = direction;
-    if (status) filters.status = status;
+  async getAllLeases(type?: string, status?: string) {
+    const filters: { type?: LeaseType; status?: LeaseStatus } = {};
+    if (type) filters.type = type as LeaseType;
+    if (status) filters.status = status as LeaseStatus;
     return this.repository.findAll(filters);
   }
 
@@ -30,15 +30,20 @@ export class LeaseService {
   async updateLease(id: string, data: any) {
     const lease = await this.repository.findById(id);
     if (!lease) throw new Error('Lease not found');
+
+    // State Machine Rule: Update only permitted if status is INTRODUCED
     if (lease.status !== LeaseStatus.INTRODUCED) {
       throw new Error('Can only modify leases in INTRODUCED status');
     }
 
     const updateData: Prisma.LeaseUncheckedUpdateInput = {};
-    if (data.asset_id) updateData.asset_id = data.asset_id;
-    if (data.counterparty_id) updateData.counterparty_id = data.counterparty_id;
-    if (data.lease_direction) updateData.lease_direction = data.lease_direction;
-    if (data.contract_amount) updateData.contract_amount = data.contract_amount;
+    if (data.asset_type) updateData.asset_type = data.asset_type;
+    if (data.measurement_unit) updateData.measurement_unit = data.measurement_unit;
+    if (data.tenant_id) updateData.tenant_id = data.tenant_id;
+    if (data.lessor_id) updateData.lessor_id = data.lessor_id;
+    if (data.amount) updateData.amount = data.amount;
+    if (data.income_expense_account) updateData.income_expense_account = data.income_expense_account;
+    if (data.transit_account) updateData.transit_account = data.transit_account;
     if (data.start_date) updateData.start_date = new Date(data.start_date);
     if (data.end_date) updateData.end_date = new Date(data.end_date);
 
@@ -48,6 +53,8 @@ export class LeaseService {
   async deleteLease(id: string) {
     const lease = await this.repository.findById(id);
     if (!lease) throw new Error('Lease not found');
+
+    // State Machine Rule: Delete only permitted if status is INTRODUCED
     if (lease.status !== LeaseStatus.INTRODUCED) {
       throw new Error('Can only delete leases in INTRODUCED status');
     }
@@ -55,27 +62,23 @@ export class LeaseService {
   }
 
   async approveLease(id: string) {
-    // Fetch lease to determine internal account logic based on lease type (OUTBOUND/INBOUND). 
-    // In our simplified plan, we hardcode an internal bank account.
-    const internalBankAccount = '12345678901234567890';
-    
     const lease = await this.repository.findById(id);
     if (!lease) throw new Error('Lease not found');
 
-    const counterpartyAccount = lease.counterparty.settlement_account;
-
-    // Use Prisma transaction defined in LeaseRepository
+    // Use transit/income-expense accounts from the lease itself
     return this.repository.approveTransaction(
       id,
-      internalBankAccount,
-      counterpartyAccount,
-      Number(lease.contract_amount)
+      lease.transit_account,
+      lease.income_expense_account,
+      Number(lease.amount)
     );
   }
 
   async returnLease(id: string) {
     const lease = await this.repository.findById(id);
     if (!lease) throw new Error('Lease not found');
+
+    // State Machine Rule: Return only permitted if status is APPROVED
     if (lease.status !== LeaseStatus.APPROVED) {
       throw new Error('Must be in APPROVED status to return');
     }
@@ -83,14 +86,46 @@ export class LeaseService {
     return this.repository.updateStatus(id, LeaseStatus.RETURNED);
   }
 
-  async payLease(id: string, type: 'IMMEDIATE' | 'NEXT_BUSINESS_DAY') {
-    if (type === 'IMMEDIATE') {
-      // Simulate Payment Push sync
-      console.log(`Pushed immediate payment to iABS for lease ${id}`);
-    } else {
-      // Simulate Worker scheduled payment sync
-      console.log(`Scheduled payment for lease ${id} on next business day`);
+  /**
+   * Payment Execution - Inbound Leases Only
+   * Generates a double-entry Memo Order (debiting transit, crediting lessor).
+   * Wrapped in a Prisma $transaction for atomicity.
+   */
+  async payLease(id: string, mode: 'IMMEDIATE' | 'SCHEDULED') {
+    const lease = await this.repository.findById(id);
+    if (!lease) throw new Error('Lease not found');
+
+    if (lease.type !== 'INBOUND') {
+      throw new Error('Payment execution is only available for inbound leases');
     }
-    return { success: true, payment_type: type };
+
+    if (lease.status !== LeaseStatus.APPROVED) {
+      throw new Error('Lease must be APPROVED to execute payment');
+    }
+
+    if (mode === 'IMMEDIATE') {
+      // Execute double-entry memo order in atomic transaction
+      const result = await this.repository.executePayment(
+        id,
+        lease.transit_account,
+        lease.income_expense_account,
+        Number(lease.amount)
+      );
+
+      return {
+        success: true,
+        payment_mode: mode,
+        memo_order: result.memoOrder,
+      };
+    } else {
+      // SCHEDULED: queue for next Monday 09:00 AM
+      const scheduledRecord = await this.repository.schedulePayment(id, Number(lease.amount));
+      console.log(`Scheduled payment for lease ${id} on ${scheduledRecord.scheduled_date}`);
+      return {
+        success: true,
+        payment_mode: mode,
+        message: `Payment scheduled for ${scheduledRecord.scheduled_date.toISOString()} processing`,
+      };
+    }
   }
 }

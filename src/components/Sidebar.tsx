@@ -1,99 +1,92 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, LogOut, LogIn, Book, Settings, ChevronLeft, ChevronRight, History } from 'lucide-react';
-import { useState } from 'react';
+import {
+  LayoutDashboard,
+  ArrowUpRight,
+  ArrowDownLeft,
+  BookOpen,
+  Settings,
+  Sparkles,
+  BarChart3,
+  Building,
+} from 'lucide-react';
 import { cn } from '../lib/utils';
+
+const navItems = [
+  { to: '/', icon: LayoutDashboard, labelKey: 'sidebar.dashboard' },
+  { to: '/outbound', icon: ArrowUpRight, labelKey: 'sidebar.outbound' },
+  { to: '/inbound', icon: ArrowDownLeft, labelKey: 'sidebar.inbound' },
+  { to: '/dictionaries', icon: BookOpen, labelKey: 'sidebar.dictionaries' },
+  { type: 'divider' as const },
+  { to: '/ai-copilot', icon: Sparkles, labelKey: 'sidebar.copilot', badge: 'AI' },
+  { to: '/analytics', icon: BarChart3, labelKey: 'sidebar.analytics', badge: 'AI' },
+  { to: '/matchmaker', icon: Building, labelKey: 'sidebar.matchmaker', badge: 'AI' },
+  { type: 'divider' as const },
+  { to: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
+];
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const menuItems = [
-    { icon: LayoutDashboard, label: t('sidebar.dashboard'), path: '/' },
-    { icon: LogOut, label: t('sidebar.outbound'), path: '/outbound' },
-    { icon: LogIn, label: t('sidebar.inbound'), path: '/inbound' },
-    { icon: Book, label: t('sidebar.dictionaries'), path: '/dictionaries' },
-    { icon: History, label: 'Activity', path: '/activity' },
-    { icon: Settings, label: t('sidebar.settings'), path: '/settings' },
-  ];
 
   return (
     <aside
-      id="app-sidebar"
-      className={cn(
-        "bg-sqb-navy flex flex-col transition-all duration-300 ease-in-out relative group shrink-0",
-        isCollapsed ? "w-20" : "w-64"
-      )}
+      id="main-sidebar"
+      className="w-64 bg-sqb-navy text-white flex flex-col h-screen sticky top-0"
     >
-      <div className="p-6 flex items-center gap-3 border-b border-white/10 shrink-0">
-        <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-hidden relative">
-          <div
-            className="w-full h-full rounded-full"
-            style={{
-              background: `conic-gradient(
-                #BDBDBD 0deg 120deg,
-                #E30613 120deg 240deg,
-                #1e5aa0 240deg 360deg
-              )`
-            }}
-          />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-5 h-5 bg-sqb-navy rounded-full" />
+      {/* Logo */}
+      <div className="p-6 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-black text-lg tracking-tighter">
+            SQB
+          </div>
+          <div>
+            <h1 className="text-sm font-bold tracking-tight">Uchet Arenda</h1>
+            <p className="text-[10px] text-white/40 font-medium tracking-widest uppercase">
+              iABS Module
+            </p>
           </div>
         </div>
-        {!isCollapsed && (
-          <div className="flex flex-col">
-            <span className="text-white font-extrabold tracking-tight text-xl leading-[0.8] mb-0.5">SQB</span>
-            <span className="text-white/40 text-[9px] uppercase tracking-widest font-bold">iABS UCHET</span>
-          </div>
-        )}
       </div>
 
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-20 bg-white border border-gray-100 rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10 text-sqb-navy"
-      >
-        {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-      </button>
-
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {menuItems.map((item) => (
-          <NavLink
-            id={`nav-link-${item.path.replace('/', 'home') || 'home'}`}
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => cn(
-              "flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group whitespace-nowrap",
-              isActive
-                ? "bg-white/10 text-white font-bold shadow-sm"
-                : "text-white/70 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            <item.icon className={cn(
-              "w-5 h-5 min-w-[20px] transition-transform group-hover:scale-110",
-              isCollapsed && "mx-auto"
-            )} />
-            {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-          </NavLink>
-        ))}
+      {/* Nav */}
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
+        {navItems.map((item, i) => {
+          if ('type' in item && item.type === 'divider') {
+            return <div key={`div-${i}`} className="h-px bg-white/10 my-3 mx-3" />;
+          }
+          const navItem = item as { to: string; icon: any; labelKey: string; badge?: string };
+          const Icon = navItem.icon;
+          return (
+            <NavLink
+              key={navItem.to}
+              to={navItem.to}
+              end={navItem.to === '/'}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative',
+                  isActive
+                    ? 'bg-white/15 text-white font-bold shadow-lg shadow-white/5'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                )
+              }
+            >
+              <Icon className="w-[18px] h-[18px]" />
+              <span className="truncate">{t(navItem.labelKey, navItem.labelKey)}</span>
+              {navItem.badge && (
+                <span className="ml-auto text-[9px] bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-1.5 py-0.5 rounded font-bold">
+                  {navItem.badge}
+                </span>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
 
-      <div className={cn("p-4 mt-auto border-t border-white/10", isCollapsed ? "text-center" : "")}>
-        <div className={cn(
-          "bg-white/5 p-3 rounded-lg border border-white/5",
-          isCollapsed ? "inline-block" : "block"
-        )}>
-          {!isCollapsed && (
-            <>
-               <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1 flex items-center gap-2">
-                <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                SYSTEM LIVE
-              </p>
-              <p className="text-[10px] font-bold text-white/80">SQB iABS v2.0</p>
-            </>
-          )}
-          {isCollapsed && <div className="w-1.5 h-1.5 bg-green-400 rounded-full mx-auto" />}
-        </div>
+      {/* Footer */}
+      <div className="p-4 border-t border-white/10">
+        <p className="text-[10px] text-white/30 text-center font-medium">
+          v3.0.0 · #BuildWithAI
+        </p>
       </div>
     </aside>
   );

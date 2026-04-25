@@ -10,16 +10,19 @@ const resources = {
         outbound: 'Outbound Leases',
         inbound: 'Inbound Leases',
         dictionaries: 'Dictionaries',
-        settings: 'Settings'
+        settings: 'Settings',
+        copilot: 'AI Copilot',
+        analytics: 'AI Analytics',
+        matchmaker: 'Matchmaker',
       },
       dashboard: {
         title: 'Lease Management Hub',
         stats: {
           activeOutbound: 'Total Active Outbound Leases',
           pendingInbound: 'Pending Inbound Payments',
-          pendingApproval: 'Assets Pending Approval'
+          pendingApproval: 'Assets Pending Approval',
         },
-        recentActivity: 'Recent Activity'
+        recentActivity: 'Recent Activity',
       },
       actions: {
         add: 'Add Record',
@@ -28,15 +31,34 @@ const resources = {
         approve: 'Approve',
         return: 'Return',
         protocol: 'Protocol',
-        pay: 'Pay'
+        pay: 'Pay',
+        search: 'Search',
+        save: 'Save',
+        cancel: 'Cancel',
+      },
+      dictionaries: {
+        clients: 'Clients',
+        accounts: 'Accounts',
+        cbuRegistry: 'CBU Registry',
+        physical: 'Physical Person',
+        juridical: 'Juridical Entity',
+      },
+      ai: {
+        copilot: 'AI Copilot',
+        analytics: 'AI Analytics',
+        matchmaker: 'Property Matchmaker',
+        askQuestion: 'Ask a question...',
+        analyzing: 'Analyzing...',
       },
       common: {
         search: 'Search INN or Asset ID...',
         user: 'Bank Controller',
         admin: 'Administrator',
-        operator: 'Operator'
-      }
-    }
+        operator: 'Operator',
+        loading: 'Loading...',
+        noData: 'No data found',
+      },
+    },
   },
   ru: {
     translation: {
@@ -45,16 +67,19 @@ const resources = {
         outbound: 'Исходящая аренда',
         inbound: 'Входящая аренда',
         dictionaries: 'Справочники',
-        settings: 'Настройки'
+        settings: 'Настройки',
+        copilot: 'ИИ Помощник',
+        analytics: 'ИИ Аналитика',
+        matchmaker: 'Подбор недвижимости',
       },
       dashboard: {
         title: 'Управление арендой',
         stats: {
           activeOutbound: 'Активная исходящая аренда',
           pendingInbound: 'Ожидающие платежи',
-          pendingApproval: 'Ожидает утверждения'
+          pendingApproval: 'Ожидает утверждения',
         },
-        recentActivity: 'Последние действия'
+        recentActivity: 'Последние действия',
       },
       actions: {
         add: 'Добавить',
@@ -63,15 +88,34 @@ const resources = {
         approve: 'Утвердить',
         return: 'Возврат',
         protocol: 'Протокол',
-        pay: 'Оплатить'
+        pay: 'Оплатить',
+        search: 'Поиск',
+        save: 'Сохранить',
+        cancel: 'Отмена',
+      },
+      dictionaries: {
+        clients: 'Контрагенты',
+        accounts: 'Счета',
+        cbuRegistry: 'Реестр МБ',
+        physical: 'Физическое лицо',
+        juridical: 'Юридическое лицо',
+      },
+      ai: {
+        copilot: 'ИИ Помощник',
+        analytics: 'ИИ Аналитика',
+        matchmaker: 'Подбор недвижимости',
+        askQuestion: 'Задайте вопрос...',
+        analyzing: 'Анализ...',
       },
       common: {
         search: 'Поиск ИНН или ID актива...',
         user: 'Контролер банка',
         admin: 'Администратор',
-        operator: 'Оператор'
-      }
-    }
+        operator: 'Оператор',
+        loading: 'Загрузка...',
+        noData: 'Данные не найдены',
+      },
+    },
   },
   uz: {
     translation: {
@@ -80,16 +124,19 @@ const resources = {
         outbound: 'Chiquvchi ijara',
         inbound: 'Kiruvchi ijara',
         dictionaries: 'Ma\'lumotnomalar',
-        settings: 'Sozlamalar'
+        settings: 'Sozlamalar',
+        copilot: 'AI Yordamchi',
+        analytics: 'AI Tahlil',
+        matchmaker: 'Ko\'chmas mulk',
       },
       dashboard: {
         title: 'Ijara boshqaruvi hubi',
         stats: {
           activeOutbound: 'Jami faol chiquvchi ijaralar',
           pendingInbound: 'Kutilayotgan kiruvchi to\'lovlar',
-          pendingApproval: 'Tasdiqlanishi kutilayotgan aktivlar'
+          pendingApproval: 'Tasdiqlanishi kutilayotgan aktivlar',
         },
-        recentActivity: 'So\'nggi harakatlar'
+        recentActivity: 'So\'nggi harakatlar',
       },
       actions: {
         add: 'Qo\'shish',
@@ -98,16 +145,35 @@ const resources = {
         approve: 'Tasdiqlash',
         return: 'Qaytarish',
         protocol: 'Protokol',
-        pay: 'To\'lash'
+        pay: 'To\'lash',
+        search: 'Qidirish',
+        save: 'Saqlash',
+        cancel: 'Bekor qilish',
+      },
+      dictionaries: {
+        clients: 'Mijozlar',
+        accounts: 'Hisoblar',
+        cbuRegistry: 'MB Reestri',
+        physical: 'Jismoniy shaxs',
+        juridical: 'Yuridik shaxs',
+      },
+      ai: {
+        copilot: 'AI Yordamchi',
+        analytics: 'AI Tahlil',
+        matchmaker: 'Ko\'chmas mulk qidirish',
+        askQuestion: 'Savol bering...',
+        analyzing: 'Tahlil qilinyapti...',
       },
       common: {
         search: 'INN yoki Aktiv ID bo\'yicha qidirish...',
         user: 'Bank nazoratchisi',
         admin: 'Administrator',
-        operator: 'Operator'
-      }
-    }
-  }
+        operator: 'Operator',
+        loading: 'Yuklanmoqda...',
+        noData: 'Ma\'lumot topilmadi',
+      },
+    },
+  },
 };
 
 i18n
@@ -117,12 +183,12 @@ i18n
     resources,
     fallbackLng: 'en',
     interpolation: {
-      escapeValue: false
+      escapeValue: false,
     },
     detection: {
       order: ['localStorage', 'navigator'],
-      caches: ['localStorage']
-    }
+      caches: ['localStorage'],
+    },
   });
 
 export default i18n;

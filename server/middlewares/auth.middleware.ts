@@ -2,7 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../prismaClient';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set.');
+  process.exit(1);
+}
 
 export const verifyToken = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;

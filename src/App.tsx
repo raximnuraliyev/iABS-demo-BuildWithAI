@@ -11,6 +11,9 @@ import OutboundLeases from './pages/OutboundLeases';
 import Dashboard from './pages/Dashboard';
 import Activity from './pages/Activity';
 import Login from './pages/Login';
+import AICopilot from './pages/AICopilot';
+import Analytics from './pages/Analytics';
+import Matchmaker from './pages/Matchmaker';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +42,9 @@ export default function App() {
                 <Route path="/dictionaries" element={<Dictionaries />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/activity" element={<Activity />} />
+                <Route path="/ai-copilot" element={<AICopilot />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/matchmaker" element={<Matchmaker />} />
               </Route>
             </Routes>
           </BrowserRouter>

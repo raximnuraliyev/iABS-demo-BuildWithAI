@@ -65,7 +65,7 @@ export function ProtocolModal({ isOpen, onClose, entityId, entityName }: Protoco
                       <div className="flex justify-between items-start mb-1">
                         <p className="text-xs font-bold text-sqb-navy">{log.action.replace(/_/g, ' ')}</p>
                         <span className="text-[10px] text-sqb-grey-secondary font-medium tracking-tight uppercase flex items-center gap-1">
-                          <Clock size={10} /> {formatDate(log.created_at)} @ {formatTime(log.created_at)}
+                          <Clock size={10} /> {formatDate(log.timestamp)} @ {formatTime(log.timestamp)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] font-medium text-sqb-grey-secondary uppercase">

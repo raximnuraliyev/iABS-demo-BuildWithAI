@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, Search, Plus, Clock, Download } from 'lucide-react';
+import { CreditCard, Search, Clock, Download, Plus } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { cn } from '../lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchLeases, payLease, createLease, type LeaseRecord } from '../lib/api';
+import { fetchLeases, payLease, type LeaseRecord } from '../lib/api';
 import { PaymentModal } from '../components/PaymentModal';
-import { LeaseFormModal } from '../components/LeaseFormModal';
 import { useToast } from '../components/Toast';
 import { exportToCSV, exportToPDF } from '../lib/export';
+
+import { LeaseFormModal } from '../components/LeaseFormModal';
 
 export default function InboundLeases() {
   const { t } = useTranslation();
@@ -17,7 +18,7 @@ export default function InboundLeases() {
   const queryClient = useQueryClient();
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isLeaseFormOpen, setIsLeaseFormOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [showExportMenu, setShowExportMenu] = useState(false);
 
@@ -26,8 +27,40 @@ export default function InboundLeases() {
     queryFn: () => fetchLeases('INBOUND'),
   });
 
+  const createMutation = useMutation({
+    mutationFn: (data: any) => 
+      fetch('/api/v1/leases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).then(res => {
+        if (!res.ok) throw new Error('Failed to create lease');
+        return res.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leases'] });
+      setIsLeaseFormOpen(false);
+      toast.success('Lease created');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'APPROVED' | 'RETURNED' }) => 
+      fetch(`/api/v1/leases/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leases'] });
+      toast.success('Status updated');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const payMutation = useMutation({
-    mutationFn: ({ id, type }: { id: string; type: 'IMMEDIATE' | 'NEXT_BUSINESS_DAY' }) => payLease(id, type),
+    mutationFn: ({ id, mode }: { id: string; mode: 'IMMEDIATE' | 'SCHEDULED' }) => payLease(id, mode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leases'] });
       setIsPaymentOpen(false);
@@ -36,28 +69,18 @@ export default function InboundLeases() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: any) => createLease(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leases'] });
-      setIsFormOpen(false);
-      toast.success('Contract created successfully');
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const filteredData = leases.filter((lease) => {
     if (searchText) {
       const q = searchText.toLowerCase();
-      return lease.counterparty?.name?.toLowerCase().includes(q) ||
-        lease.asset?.name?.toLowerCase().includes(q) ||
-        lease.counterparty?.inn?.toLowerCase().includes(q);
+      return lease.lessor?.name?.toLowerCase().includes(q) ||
+        lease.asset_type?.toLowerCase().includes(q) ||
+        lease.lessor?.inn?.toLowerCase().includes(q);
     }
     return true;
   });
 
   const approvedLeases = leases.filter(l => l.status === 'APPROVED');
-  const totalPending = approvedLeases.reduce((s, l) => s + Number(l.contract_amount), 0);
+  const totalPending = approvedLeases.reduce((s, l) => s + Number(l.amount), 0);
 
   const formatAmount = (val: number): string => {
     if (val >= 1_000_000_000) return `${(val / 1_000_000_000).toFixed(1)}B`;
@@ -74,9 +97,9 @@ export default function InboundLeases() {
       )
     },
     { accessorKey: 'id', header: 'Lease ID', cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string).slice(0, 8)}...</span> },
-    { id: 'lessor', header: 'Lessor Name', accessorFn: (row) => row.counterparty?.name ?? '—' },
-    { id: 'account', header: 'Settlement Account', accessorFn: (row) => row.counterparty?.settlement_account ?? '—', cell: ({ getValue }) => <span className="font-mono text-xs">{getValue() as string}</span> },
-    { accessorKey: 'contract_amount', header: 'Amount Due', cell: ({ getValue }) => <span className="font-bold">{Number(getValue()).toLocaleString('en-US')} UZS</span> },
+    { id: 'lessor', header: 'Lessor', accessorFn: (row) => row.lessor?.name ?? '—' },
+    { accessorKey: 'asset_type', header: 'Asset' },
+    { accessorKey: 'amount', header: 'Amount Due', cell: ({ getValue }) => <span className="font-bold">{Number(getValue()).toLocaleString('en-US')} UZS</span> },
     {
       accessorKey: 'status', header: 'Status',
       cell: ({ getValue }) => {
@@ -96,9 +119,9 @@ export default function InboundLeases() {
   const upcomingPayments = [...approvedLeases].sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()).slice(0, 3);
 
   const exportCols = [
-    { header: 'Lessor', accessor: 'counterparty.name' },
-    { header: 'Account', accessor: 'counterparty.settlement_account' },
-    { header: 'Amount', accessor: 'contract_amount' },
+    { header: 'Lessor', accessor: 'lessor.name' },
+    { header: 'Asset', accessor: 'asset_type' },
+    { header: 'Amount', accessor: 'amount' },
     { header: 'Status', accessor: 'status' },
     { header: 'Due Date', accessor: 'end_date' },
   ];
@@ -108,14 +131,39 @@ export default function InboundLeases() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-sqb-navy">{t('sidebar.inbound')}</h1>
-          <p className="text-sm text-sqb-grey-secondary">Managing assets rented by the bank from third parties.</p>
+          <p className="text-sm text-sqb-grey-secondary">Assets rented by the bank from third parties (Получение в аренду).</p>
         </div>
         <div className="flex gap-2">
+          <button className="sqb-btn-primary flex items-center gap-2" onClick={() => setIsLeaseFormOpen(true)}>
+            <Plus size={16} /> {t('actions.add')}
+          </button>
+          <div className="w-px h-8 bg-gray-200 mx-1" />
+          {selectedLease && selectedLease.status === 'INTRODUCED' && (
+            <button
+              className="sqb-btn-secondary flex items-center gap-2 border-green-600 text-green-700 hover:bg-green-50"
+              onClick={() => {
+                if (selectedLease) {
+                  updateStatusMutation.mutate({ id: selectedLease.id, status: 'APPROVED' });
+                }
+              }}
+            >
+              Approve
+            </button>
+          )}
+          {selectedLease && selectedLease.status === 'APPROVED' && (
+            <button
+              className="sqb-btn-secondary flex items-center gap-2 border-red-600 text-red-700 hover:bg-red-50"
+              onClick={() => {
+                if (selectedLease) {
+                  updateStatusMutation.mutate({ id: selectedLease.id, status: 'RETURNED' });
+                }
+              }}
+            >
+              Return
+            </button>
+          )}
           <button className="sqb-btn-primary flex items-center gap-2 bg-amber-600 border-amber-600 hover:bg-amber-700" onClick={() => setIsPaymentOpen(true)} disabled={selectedLease?.status !== 'APPROVED'}>
             <CreditCard size={18} /> {t('actions.pay')}
-          </button>
-          <button className="sqb-btn-primary flex items-center gap-2" onClick={() => setIsFormOpen(true)}>
-            <Plus size={18} /> New Contract
           </button>
           <div className="relative">
             <button className="sqb-btn-secondary flex items-center gap-2" onClick={() => setShowExportMenu(!showExportMenu)}>
@@ -164,7 +212,7 @@ export default function InboundLeases() {
                 upcomingPayments.map((lease) => (
                   <div key={lease.id} className="flex justify-between items-center text-xs">
                     <span className="text-sqb-grey-secondary font-medium">{new Date(lease.end_date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</span>
-                    <span className="font-bold text-sqb-navy">{formatAmount(Number(lease.contract_amount))} UZS</span>
+                    <span className="font-bold text-sqb-navy">{formatAmount(Number(lease.amount))} UZS</span>
                   </div>
                 ))
               )}
@@ -176,11 +224,16 @@ export default function InboundLeases() {
       <PaymentModal
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
-        lease={selectedLease ? { id: selectedLease.id, counterparty: selectedLease.counterparty?.name ?? '', account: selectedLease.counterparty?.settlement_account ?? '', amount: Number(selectedLease.contract_amount).toLocaleString('en-US'), currency: 'UZS' } : null}
-        onPay={(type) => { if (selectedRow) payMutation.mutate({ id: selectedRow, type }); }}
+        lease={selectedLease ? { id: selectedLease.id, counterparty: selectedLease.lessor?.name ?? '', account: selectedLease.transit_account ?? '', amount: Number(selectedLease.amount).toLocaleString('en-US'), currency: 'UZS' } : null}
+        onPay={(type) => { if (selectedRow) payMutation.mutate({ id: selectedRow, mode: type as 'IMMEDIATE' | 'SCHEDULED' }); }}
       />
 
-      <LeaseFormModal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={(data) => createMutation.mutate(data)} direction="INBOUND" />
+      <LeaseFormModal 
+        isOpen={isLeaseFormOpen} 
+        onClose={() => setIsLeaseFormOpen(false)} 
+        onSubmit={(data) => createMutation.mutate(data)} 
+        direction="INBOUND" 
+      />
     </div>
   );
 }

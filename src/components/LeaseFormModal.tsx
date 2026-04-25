@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchAssets, fetchCounterparties, type LeaseRecord } from '../lib/api';
+import { fetchClients, type LeaseRecord, type ClientRecord } from '../lib/api';
 
 interface LeaseFormModalProps {
   isOpen: boolean;
@@ -14,48 +14,52 @@ interface LeaseFormModalProps {
 
 export function LeaseFormModal({ isOpen, onClose, onSubmit, direction, editData }: LeaseFormModalProps) {
   const [formData, setFormData] = useState({
-    asset_id: '',
-    counterparty_id: '',
-    contract_amount: '',
+    asset_type: '',
+    measurement_unit: 'PIECES',
+    client_id: '',
+    amount: '',
+    income_expense_account: '',
+    transit_account: '',
     start_date: '',
     end_date: '',
   });
 
-  const { data: assets = [] } = useQuery({
-    queryKey: ['assets'],
-    queryFn: () => fetchAssets(),
-    enabled: isOpen,
-  });
-
-  const counterpartyType = direction === 'OUTBOUND' ? 'TENANT' : 'LESSOR';
-  const { data: counterparties = [] } = useQuery({
-    queryKey: ['counterparties', counterpartyType],
-    queryFn: () => fetchCounterparties(counterpartyType),
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => fetchClients(),
     enabled: isOpen,
   });
 
   useEffect(() => {
     if (editData) {
       setFormData({
-        asset_id: editData.asset_id,
-        counterparty_id: editData.counterparty_id,
-        contract_amount: String(editData.contract_amount),
+        asset_type: editData.asset_type,
+        measurement_unit: editData.measurement_unit,
+        client_id: direction === 'OUTBOUND' ? editData.tenant_id : editData.lessor_id,
+        amount: String(editData.amount),
+        income_expense_account: editData.income_expense_account,
+        transit_account: editData.transit_account,
         start_date: editData.start_date.slice(0, 10),
         end_date: editData.end_date.slice(0, 10),
       });
     } else {
-      setFormData({ asset_id: '', counterparty_id: '', contract_amount: '', start_date: '', end_date: '' });
+      setFormData({ asset_type: '', measurement_unit: 'PIECES', client_id: '', amount: '', income_expense_account: '', transit_account: '', start_date: '', end_date: '' });
     }
   }, [editData, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      ...formData,
+      type: direction,
+      asset_type: formData.asset_type,
+      measurement_unit: formData.measurement_unit,
+      tenant_id: direction === 'OUTBOUND' ? formData.client_id : undefined,
+      lessor_id: direction === 'INBOUND' ? formData.client_id : undefined,
+      amount: parseFloat(formData.amount),
+      income_expense_account: formData.income_expense_account,
+      transit_account: formData.transit_account,
       start_date: new Date(formData.start_date).toISOString(),
       end_date: new Date(formData.end_date).toISOString(),
-      lease_direction: direction,
-      contract_amount: parseFloat(formData.contract_amount),
     });
   };
 
@@ -88,19 +92,28 @@ export function LeaseFormModal({ isOpen, onClose, onSubmit, direction, editData 
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 space-y-5">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Asset</label>
-                <select
-                  required
-                  value={formData.asset_id}
-                  onChange={(e) => setFormData({ ...formData, asset_id: e.target.value })}
-                  className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20 text-sm"
-                >
-                  <option value="">Select asset...</option>
-                  {assets.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name} ({a.category})</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Asset Type</label>
+                  <input
+                    required
+                    value={formData.asset_type}
+                    onChange={(e) => setFormData({ ...formData, asset_type: e.target.value })}
+                    className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20 text-sm"
+                    placeholder="e.g. Server Rack HP-99"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Unit</label>
+                  <select
+                    value={formData.measurement_unit}
+                    onChange={(e) => setFormData({ ...formData, measurement_unit: e.target.value })}
+                    className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20 text-sm"
+                  >
+                    <option value="PIECES">Pieces</option>
+                    <option value="SQ_METERS">m²</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -109,12 +122,12 @@ export function LeaseFormModal({ isOpen, onClose, onSubmit, direction, editData 
                 </label>
                 <select
                   required
-                  value={formData.counterparty_id}
-                  onChange={(e) => setFormData({ ...formData, counterparty_id: e.target.value })}
+                  value={formData.client_id}
+                  onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
                   className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20 text-sm"
                 >
-                  <option value="">Select counterparty...</option>
-                  {counterparties.map((c) => (
+                  <option value="">Select client...</option>
+                  {clients.map((c: ClientRecord) => (
                     <option key={c.id} value={c.id}>{c.name} (INN: {c.inn})</option>
                   ))}
                 </select>
@@ -127,8 +140,8 @@ export function LeaseFormModal({ isOpen, onClose, onSubmit, direction, editData 
                   required
                   min="0"
                   step="0.01"
-                  value={formData.contract_amount}
-                  onChange={(e) => setFormData({ ...formData, contract_amount: e.target.value })}
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20 text-sm font-mono"
                   placeholder="0.00"
                 />

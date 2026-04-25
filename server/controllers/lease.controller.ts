@@ -6,8 +6,8 @@ const service = new LeaseService();
 export const leaseController = {
   getAll: async (req: Request, res: Response) => {
     try {
-      const { direction, status } = req.query;
-      const leases = await service.getAllLeases(direction as string, status as string);
+      const { type, status } = req.query;
+      const leases = await service.getAllLeases(type as string, status as string);
       res.json(leases);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -30,7 +30,7 @@ export const leaseController = {
         action: 'CREATE_LEASE',
         entity_name: 'leases',
         entity_id: lease.id,
-        new_data: lease
+        new_data: lease,
       };
       res.status(201).json(lease);
     } catch (e: any) {
@@ -46,7 +46,7 @@ export const leaseController = {
         action: 'UPDATE_LEASE',
         entity_name: 'leases',
         entity_id: req.params.id,
-        new_data: lease
+        new_data: lease,
       };
       res.json(lease);
     } catch (e: any) {
@@ -75,7 +75,7 @@ export const leaseController = {
         action: 'APPROVE_LEASE',
         entity_name: 'leases',
         entity_id: req.params.id,
-        new_data: { status: 'APPROVED' }
+        new_data: { status: 'APPROVED' },
       };
       res.json(result);
     } catch (e: any) {
@@ -90,7 +90,7 @@ export const leaseController = {
         action: 'RETURN_LEASE',
         entity_name: 'leases',
         entity_id: req.params.id,
-        new_data: { status: 'RETURNED' }
+        new_data: { status: 'RETURNED' },
       };
       res.json(result);
     } catch (e: any) {
@@ -100,7 +100,13 @@ export const leaseController = {
 
   pay: async (req: Request, res: Response) => {
     try {
-      const result = await service.payLease(req.params.id, req.body.payment_type);
+      const result = await service.payLease(req.params.id, req.body.mode);
+      req.auditInfo = {
+        action: 'EXECUTE_PAYMENT',
+        entity_name: 'leases',
+        entity_id: req.params.id,
+        new_data: result,
+      };
       res.json(result);
     } catch (e: any) {
       res.status(400).json({ error: e.message });

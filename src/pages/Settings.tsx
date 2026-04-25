@@ -25,7 +25,7 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('users');
   const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({ tabel_id: '', full_name: '', role_id: '', password: '' });
+  const [newUser, setNewUser] = useState<{ tabel_id: string; full_name: string; password: string; permissions: string[] }>({ tabel_id: '', full_name: '', password: '', permissions: [] });
 
   const isHeadAdmin = authUser?.is_head_admin ?? false;
 
@@ -37,7 +37,7 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowAddUser(false);
-      setNewUser({ tabel_id: '', full_name: '', role_id: '', password: '' });
+      setNewUser({ tabel_id: '', full_name: '', password: '', permissions: [] });
       toast.success('Employee created');
     },
     onError: (e: Error) => toast.error(e.message),
@@ -135,7 +135,7 @@ export default function Settings() {
                       "text-[10px] font-bold uppercase px-3 py-1 rounded-full border",
                       u.role.name === 'Admin' ? "bg-sqb-navy text-white border-sqb-navy" : "bg-white text-sqb-navy border-gray-200"
                     )}>
-                      {u.role.name}
+                      {u.role.name.startsWith('CustomRole_') ? 'Custom Permissions' : u.role.name}
                     </span>
                     {u.is_head_admin && <span className="ml-2 text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">HEAD</span>}
                   </td>
@@ -269,13 +269,27 @@ export default function Settings() {
                   <input required type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className="w-full bg-sqb-bg border-none rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sqb-navy/20" placeholder="••••••••" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Role</label>
-                  <select required value={newUser.role_id} onChange={(e) => setNewUser({ ...newUser, role_id: e.target.value })} className="w-full bg-sqb-bg border-none rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sqb-navy/20">
-                    <option value="">Select role...</option>
-                    {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
+                  <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Button-level Permissions</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                    {allActions.map(action => (
+                      <label key={action} className="flex items-center gap-2 text-sm bg-sqb-bg p-3 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                        <input 
+                          type="checkbox" 
+                          checked={newUser.permissions.includes(action)}
+                          onChange={(e) => {
+                            const perms = e.target.checked 
+                              ? [...newUser.permissions, action] 
+                              : newUser.permissions.filter(p => p !== action);
+                            setNewUser({ ...newUser, permissions: perms });
+                          }}
+                          className="w-4 h-4 accent-sqb-navy rounded border-gray-300"
+                        />
+                        <span className="font-medium">{PERMISSION_LABELS[action]}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-3 pt-4">
                   <button type="button" onClick={() => setShowAddUser(false)} className="flex-1 sqb-btn-ghost">Cancel</button>
                   <button type="submit" className="flex-1 sqb-btn-primary justify-center" disabled={createMutation.isPending}>
                     {createMutation.isPending ? 'Creating...' : 'Create Employee'}

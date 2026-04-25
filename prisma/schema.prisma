@@ -6,6 +6,10 @@ datasource db {
   provider = "postgresql"
 }
 
+// ══════════════════════════════════════════════
+// AUTH & RBAC
+// ══════════════════════════════════════════════
+
 model User {
   tabel_id      String    @id
   full_name     String
@@ -33,46 +37,70 @@ model RolePermission {
   @@unique([role_id, action_name])
 }
 
-enum CounterpartyType {
-  TENANT
-  LESSOR
+// ══════════════════════════════════════════════
+// DICTIONARIES (Справочники)
+// ══════════════════════════════════════════════
+
+enum SubjectType {
+  P // Physical person
+  J // Juridical entity
 }
 
-model Counterparty {
-  id                 String           @id @default(uuid()) @db.Uuid
-  inn                String           @unique
-  name               String
-  settlement_account String
-  type               CounterpartyType
+model Client {
+  id          String      @id @default(uuid()) @db.Uuid
+  code        String      @unique
+  name        String
+  subject     SubjectType
+  code_filial String
+  inn         String      @unique
+  address     String      @default("")
+  phone       String      @default("")
+  condition   Boolean     @default(true) // true=active, false=passive
 
-  leases             Lease[]
+  accounts         Account[]
+  leases_as_tenant Lease[]   @relation("LeaseTenant")
+  leases_as_lessor Lease[]   @relation("LeaseLessor")
+
+  @@index([code_filial])
+  @@index([inn])
 }
 
-enum AssetCategory {
-  PC
-  FURNITURE
-  BUILDING
-  LAND
-  ATM
+enum AccountType {
+  INCOME
+  EXPENSE
+  TRANSIT
 }
 
-enum MeasurementUnit {
-  PIECES
-  SQ_METERS
+model CBURegistry {
+  id           String      @id @default(uuid()) @db.Uuid
+  coa_code     String      @unique @db.VarChar(5)
+  description  String
+  account_type AccountType
+
+  @@map("cbu_registry")
 }
 
-model Asset {
-  id               String          @id @default(uuid()) @db.Uuid
-  name             String
-  category         AssetCategory
-  measurement_unit MeasurementUnit
+model Account {
+  id            String @id @default(uuid()) @db.Uuid
+  client_id     String @db.Uuid
+  code          String @unique @db.VarChar(20) // 20-digit account code
+  code_filial   String
+  code_coa      String @db.VarChar(5) // first 5 digits of code
+  code_currency String @default("000") // e.g. '000' (UZS), '840' (USD)
 
-  leases           Lease[]
+  client Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@index([client_id])
+  @@index([code_coa])
 }
 
-enum LeaseDirection {
-  OUTBOUND
-  INBOUND
+// ══════════════════════════════════════════════
+// LEASE MANAGEMENT (Шартномалар)
+// ══════════════════════════════════════════════
+
+enum LeaseType {
+  OUTBOUND // Bank rents out (Сдача в аренду)
+  INBOUND  // Bank rents in (Получение в аренду)
 }
 
 enum LeaseStatus {
@@ -82,19 +110,29 @@ enum LeaseStatus {
 }
 
 model Lease {
-  id              String         @id @default(uuid()) @db.Uuid
-  asset_id        String         @db.Uuid
-  counterparty_id String         @db.Uuid
-  lease_direction LeaseDirection
-  status          LeaseStatus    @default(INTRODUCED)
-  contract_amount Decimal        @db.Decimal(15, 2)
-  start_date      DateTime
-  end_date        DateTime
+  id                     String      @id @default(uuid()) @db.Uuid
+  type                   LeaseType
+  status                 LeaseStatus @default(INTRODUCED)
+  asset_type             String
+  measurement_unit       String
+  amount                 Decimal     @db.Decimal(15, 2)
+  tenant_id              String      @db.Uuid
+  lessor_id              String      @db.Uuid
+  income_expense_account String      @db.VarChar(20)
+  transit_account        String      @db.VarChar(20)
+  start_date             DateTime
+  end_date               DateTime
+  created_at             DateTime    @default(now())
 
-  asset        Asset          @relation(fields: [asset_id], references: [id])
-  counterparty Counterparty   @relation(fields: [counterparty_id], references: [id])
-  
-  memo_orders  MemoOrder[]
+  tenant      Client      @relation("LeaseTenant", fields: [tenant_id], references: [id])
+  lessor      Client      @relation("LeaseLessor", fields: [lessor_id], references: [id])
+  memo_orders MemoOrder[]
+  scheduled_payments ScheduledPayment[]
+
+  @@index([type])
+  @@index([status])
+  @@index([tenant_id])
+  @@index([lessor_id])
 }
 
 model MemoOrder {
@@ -106,15 +144,41 @@ model MemoOrder {
   generated_at      DateTime @default(now())
 
   lease Lease @relation(fields: [lease_id], references: [id])
+
+  @@index([lease_id])
 }
 
+// ══════════════════════════════════════════════
+// AUDIT LOG (Протокол)
+// ══════════════════════════════════════════════
+
 model AuditLog {
-  id            String   @id @default(uuid()) @db.Uuid
-  tabel_id      String
-  action        String
-  entity_name   String
-  entity_id     String   @db.Uuid
-  previous_data Json?
-  new_data      Json?
-  created_at    DateTime @default(now())
+  id        String   @id @default(uuid()) @db.Uuid
+  tabel_id  String
+  action    String
+  entity    String
+  entity_id String   @db.Uuid
+  payload   Json?
+  timestamp DateTime @default(now())
+
+  @@index([entity, entity_id])
+  @@index([tabel_id])
+}
+
+// ══════════════════════════════════════════════
+// PAYMENT QUEUE (Очередь платежей)
+// ══════════════════════════════════════════════
+
+model ScheduledPayment {
+  id             String   @id @default(uuid()) @db.Uuid
+  lease_id       String   @db.Uuid
+  amount         Decimal  @db.Decimal(15, 2)
+  scheduled_date DateTime
+  status         String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  created_at     DateTime @default(now())
+
+  lease Lease @relation(fields: [lease_id], references: [id])
+
+  @@index([status])
+  @@index([scheduled_date])
 }

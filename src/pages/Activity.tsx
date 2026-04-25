@@ -12,7 +12,9 @@ const actionIcons: Record<string, any> = {
   UPDATE_LEASE: FileText,
   DELETE_LEASE: Trash2,
   CREATE_COUNTERPARTY: UserCircle,
+  CREATE_CLIENT: UserCircle,
   UPDATE_ROLE_PERMISSION: Shield,
+  EXECUTE_PAYMENT: CreditCard,
   LOGIN: UserCircle,
 };
 
@@ -21,7 +23,9 @@ const actionColors: Record<string, string> = {
   CREATE_LEASE: 'bg-blue-100 text-blue-700',
   DELETE_LEASE: 'bg-red-100 text-red-700',
   CREATE_COUNTERPARTY: 'bg-purple-100 text-purple-700',
+  CREATE_CLIENT: 'bg-purple-100 text-purple-700',
   UPDATE_ROLE_PERMISSION: 'bg-amber-100 text-amber-700',
+  EXECUTE_PAYMENT: 'bg-emerald-100 text-emerald-700',
   LOGIN: 'bg-gray-100 text-gray-700',
 };
 
@@ -41,7 +45,7 @@ export default function Activity() {
       const q = searchText.toLowerCase();
       return log.tabel_id.toLowerCase().includes(q) ||
         log.action.toLowerCase().includes(q) ||
-        log.entity_name.toLowerCase().includes(q);
+        (log.entity || '').toLowerCase().includes(q);
     }
     return true;
   });
@@ -108,7 +112,7 @@ export default function Activity() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-sqb-navy">{log.action.replace(/_/g, ' ')}</span>
-                      <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full uppercase font-bold">{log.entity_name}</span>
+                      <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full uppercase font-bold">{log.entity}</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
                       by <span className="font-bold text-sqb-grey-secondary">{log.tabel_id}</span>
@@ -116,9 +120,9 @@ export default function Activity() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-xs font-bold text-sqb-navy">{formatDate(log.created_at)}</p>
+                    <p className="text-xs font-bold text-sqb-navy">{formatDate(log.timestamp)}</p>
                     <p className="text-[10px] text-gray-400 flex items-center justify-end gap-1">
-                      <Clock size={10} /> {formatTime(log.created_at)}
+                      <Clock size={10} /> {formatTime(log.timestamp)}
                     </p>
                   </div>
                 </motion.div>

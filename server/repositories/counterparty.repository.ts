@@ -1,33 +1,25 @@
-import prisma from '../prismaClient';
-import { Prisma } from '@prisma/client';
+// DEPRECATED: Counterparty model has been replaced by Client
+// This file is kept for backward compatibility but is no longer used.
+// See: server/repositories/client.repository.ts
 
 export class CounterpartyRepository {
-  async findAll(type?: string, search?: string) {
-    const where: any = {};
-    if (type) where.type = type;
-    if (search) {
-      where.OR = [
-        { inn: { contains: search } },
-        { name: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    return prisma.counterparty.findMany({ where, orderBy: { name: 'asc' } });
+  async findAll(_type?: string, _search?: string) {
+    return [];
   }
 
-  async findById(id: string) {
-    return prisma.counterparty.findUnique({ where: { id } });
+  async findById(_id: string) {
+    return null;
   }
 
-  async create(data: Prisma.CounterpartyUncheckedCreateInput) {
-    return prisma.counterparty.create({ data });
+  async create(_data: any) {
+    throw new Error('Counterparty model deprecated. Use Client instead.');
   }
 
-  async update(id: string, data: Prisma.CounterpartyUncheckedUpdateInput) {
-    return prisma.counterparty.update({ where: { id }, data });
+  async update(_id: string, _data: any) {
+    throw new Error('Counterparty model deprecated. Use Client instead.');
   }
 
-  async delete(id: string) {
-    return prisma.counterparty.delete({ where: { id } });
+  async delete(_id: string) {
+    throw new Error('Counterparty model deprecated. Use Client instead.');
   }
 }

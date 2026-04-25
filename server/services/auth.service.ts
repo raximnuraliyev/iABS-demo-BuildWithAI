@@ -2,7 +2,7 @@ import { AuthRepository } from '../repositories/auth.repository';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 export class AuthService {
   private repository: AuthRepository;
@@ -15,8 +15,13 @@ export class AuthService {
     const user = await this.repository.findUserByTabelId(tabel_id);
     if (!user) return null;
 
-    const isValid = await bcrypt.compare(password, user.password_hash);
-    if (!isValid) return null;
+    // Allow empty password_hash for demo/seed users (first login)
+    if (user.password_hash === '') {
+      // Demo mode: any password works for users with empty hash
+    } else {
+      const isValid = await bcrypt.compare(password, user.password_hash);
+      if (!isValid) return null;
+    }
 
     const token = jwt.sign(
       { tabel_id: user.tabel_id, role_id: user.role_id },

@@ -46,15 +46,38 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
 
-    const { tabel_id, full_name, role_id, password } = req.body;
-    if (!tabel_id || !full_name || !role_id || !password) {
-      res.status(400).json({ error: 'tabel_id, full_name, role_id, and password are required' });
+    const { tabel_id, full_name, password, permissions = [] } = req.body;
+    if (!tabel_id || !full_name || !password) {
+      res.status(400).json({ error: 'tabel_id, full_name, and password are required' });
       return;
     }
 
     const password_hash = await bcrypt.hash(password, 10);
+    
+    // Create a custom role for this specific user to support button-level permissions
+    const customRoleName = `CustomRole_${tabel_id}_${Date.now()}`;
+    const allActions = [
+      'can_add_lease', 
+      'can_approve_lease', 
+      'can_execute_payment', 
+      'can_view_audit', 
+      'can_manage_users'
+    ];
+    
+    const role = await prisma.role.create({
+      data: {
+        name: customRoleName,
+        permissions: {
+          create: allActions.map(action => ({
+            action_name: action,
+            is_allowed: permissions.includes(action)
+          }))
+        }
+      }
+    });
+
     const user = await prisma.user.create({
-      data: { tabel_id, full_name, role_id, password_hash },
+      data: { tabel_id, full_name, role_id: role.id, password_hash },
       include: { role: true },
     });
 
