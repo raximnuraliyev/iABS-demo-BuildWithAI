@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-sqb-navy: #00325B;
+  --color-sqb-red: #E30613;
+  --color-sqb-bg: #F8F9FA;
+  --color-sqb-muted: #F3F4F6;
+  --color-sqb-text-main: #1F2937;
+  --color-sqb-grey-secondary: #6B7280;
+  
+  --radius-xl: 12px;
+}
+
+@layer base {
+  body {
+    @apply bg-sqb-bg text-sqb-text-main font-sans antialiased;
+  }
+}
+
+@layer components {
+  .sqb-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100;
+  }
+  
+  .sqb-btn-primary {
+    @apply bg-sqb-navy text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all hover:bg-sqb-navy/90 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .sqb-btn-ghost {
+    @apply text-sqb-navy border border-sqb-navy px-4 py-2 rounded-lg text-sm font-bold bg-white transition-all hover:bg-sqb-navy/5 disabled:opacity-50;
+  }
+  
+  .sqb-btn-danger {
+    @apply text-sqb-red border border-sqb-red px-4 py-2 rounded-lg text-sm font-bold bg-white transition-all hover:bg-sqb-red/5 disabled:opacity-50;
+  }
+
+  .sqb-btn-secondary {
+    @apply text-sqb-navy bg-[#F3F4F6] px-4 py-2 rounded-lg text-sm font-bold transition-all hover:bg-gray-200;
+  }
+}
