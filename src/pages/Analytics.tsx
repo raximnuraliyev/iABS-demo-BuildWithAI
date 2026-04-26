@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3, Send, Loader2, Code, Table } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -21,6 +21,14 @@ export default function Analytics() {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<{ sql: string; data: any[] } | null>(null);
   const [chartType, setChartType] = useState<'bar' | 'line' | 'table'>('bar');
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setInterval(() => setCooldown(c => c - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [cooldown]);
 
   const mutation = useMutation({
     mutationFn: (q: string) => aiAnalytics(q),
@@ -28,9 +36,11 @@ export default function Analytics() {
   });
 
   const handleQuery = (q?: string) => {
+    if (cooldown > 0) return;
     const text = q || query.trim();
     if (!text) return;
     setQuery(text);
+    setCooldown(45);
     mutation.mutate(text);
   };
 
@@ -53,7 +63,7 @@ export default function Analytics() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-sqb-navy flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl text-white">
+            <div className="p-2 bg-sqb-red rounded-xl text-white">
               <BarChart3 size={22} />
             </div>
             {t('sidebar.analytics', 'AI Analytics')}
@@ -68,17 +78,16 @@ export default function Analytics() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask a question about your lease data in natural language..."
-            className="flex-1 bg-sqb-bg border-none rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
-            disabled={mutation.isPending}
+            placeholder={cooldown > 0 ? `Wait ${cooldown}s before sending next prompt...` : "Ask a question about your lease data in natural language..."}
+            className="flex-1 bg-sqb-bg border-none rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-sqb-red/20 transition-all disabled:opacity-50 disabled:bg-gray-100"
+            disabled={mutation.isPending || cooldown > 0}
           />
           <button
             type="submit"
-            disabled={!query.trim() || mutation.isPending}
-            className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-amber-500/25 transition-all disabled:opacity-40 flex items-center gap-2"
+            disabled={!query.trim() || mutation.isPending || cooldown > 0}
+            className="bg-sqb-red text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-sqb-red/25 transition-all disabled:opacity-40 flex items-center gap-2"
           >
-            {mutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-            Analyze
+            {cooldown > 0 ? <span>{cooldown}s</span> : (mutation.isPending ? <Loader2 size={16} className="animate-spin text-white" /> : <Send size={16} />)} Analyze
           </button>
         </form>
 
@@ -88,8 +97,8 @@ export default function Analytics() {
             <button
               key={i}
               onClick={() => handleQuery(eq)}
-              disabled={mutation.isPending}
-              className="text-xs bg-sqb-bg hover:bg-amber-50 text-sqb-navy px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50"
+              disabled={mutation.isPending || cooldown > 0}
+              className="text-xs bg-sqb-bg hover:bg-sqb-muted text-sqb-navy px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50"
             >
               {eq}
             </button>
@@ -112,7 +121,7 @@ export default function Analytics() {
             <div className="flex items-center gap-2 text-gray-400 text-xs font-bold mb-3">
               <Code size={14} /> Generated SQL
             </div>
-            <pre className="text-green-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+            <pre className="text-sqb-navy font-semibold text-xs font-mono overflow-x-auto whitespace-pre-wrap">
               {result.sql}
             </pre>
           </div>

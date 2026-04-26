@@ -32,7 +32,7 @@ export default function Matchmaker() {
     <div id="matchmaker-page" className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-sqb-navy flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl text-white">
+          <div className="p-2 bg-sqb-navy rounded-xl text-white">
             <Building size={22} />
           </div>
           {t('sidebar.matchmaker', 'Property Matchmaker')}
@@ -47,13 +47,13 @@ export default function Matchmaker() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Describe the property you're looking for in natural language..."
-            className="flex-1 bg-sqb-bg border-none rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="flex-1 bg-sqb-bg border-none rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-sqb-navy/20"
             disabled={mutation.isPending}
           />
           <button
             type="submit"
             disabled={!prompt.trim() || mutation.isPending}
-            className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-emerald-500/25 transition-all disabled:opacity-40 flex items-center gap-2"
+            className="bg-sqb-navy text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-sqb-navy/25 transition-all disabled:opacity-40 flex items-center gap-2"
           >
             {mutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             Search
@@ -66,7 +66,7 @@ export default function Matchmaker() {
               key={i}
               onClick={() => handleSearch(ex)}
               disabled={mutation.isPending}
-              className="text-xs bg-sqb-bg hover:bg-emerald-50 text-sqb-navy px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50"
+              className="text-xs bg-sqb-bg hover:bg-sqb-muted text-sqb-navy px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50"
             >
               {ex}
             </button>
@@ -106,8 +106,8 @@ export default function Matchmaker() {
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow group"
               >
                 <div className="h-40 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 flex items-center justify-center relative">
-                  <Building className="w-16 h-16 text-emerald-200" />
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1 text-xs font-bold text-emerald-700">
+                  <Building className="w-16 h-16 text-sqb-navy" />
+                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1 text-xs font-bold text-sqb-navy">
                     <Star size={12} className="fill-amber-400 text-amber-400" />
                     {Math.round(prop.match_score * 100)}% match
                   </div>
@@ -121,7 +121,7 @@ export default function Matchmaker() {
                   </div>
                   <div className="flex flex-wrap gap-1 pt-2">
                     {(prop.features || []).map((f: string) => (
-                      <span key={f} className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">{f}</span>
+                      <span key={f} className="text-[10px] bg-emerald-50 text-sqb-navy px-2 py-0.5 rounded-full font-bold">{f}</span>
                     ))}
                   </div>
                 </div>

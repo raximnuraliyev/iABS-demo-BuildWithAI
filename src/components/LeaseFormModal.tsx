@@ -149,6 +149,31 @@ export function LeaseFormModal({ isOpen, onClose, onSubmit, direction, editData 
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Income/Expense Account</label>
+                  <input
+                    required
+                    maxLength={20}
+                    value={formData.income_expense_account}
+                    onChange={(e) => setFormData({ ...formData, income_expense_account: e.target.value })}
+                    className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20 text-sm font-mono"
+                    placeholder="20 digits"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Transit Account</label>
+                  <input
+                    required
+                    maxLength={20}
+                    value={formData.transit_account}
+                    onChange={(e) => setFormData({ ...formData, transit_account: e.target.value })}
+                    className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20 text-sm font-mono"
+                    placeholder="20 digits"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Start Date</label>
                   <input
                     type="date"

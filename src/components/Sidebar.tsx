@@ -36,13 +36,20 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-black text-lg tracking-tighter">
-            SQB
+          <div className="w-11 h-11 rounded-full relative shrink-0"
+            style={{
+              background: `conic-gradient(#BDBDBD 0deg 120deg, #E30613 120deg 240deg, #1e5aa0 240deg 360deg)`
+            }}
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-5 h-5 bg-sqb-navy rounded-full" />
+            </div>
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight">Uchet Arenda</h1>
+            <h1 className="text-sm font-bold tracking-tight leading-tight">iABS Demo</h1>
+            <p className="text-[10px] font-medium text-white/60">#BuildWithAI</p>
             <p className="text-[10px] text-white/40 font-medium tracking-widest uppercase">
-              iABS Module
+              SQB BANK
             </p>
           </div>
         </div>
@@ -73,7 +80,7 @@ export function Sidebar() {
               <Icon className="w-[18px] h-[18px]" />
               <span className="truncate">{t(navItem.labelKey, navItem.labelKey)}</span>
               {navItem.badge && (
-                <span className="ml-auto text-[9px] bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-1.5 py-0.5 rounded font-bold">
+                <span className="ml-auto text-[9px] bg-sqb-red text-white px-1.5 py-0.5 rounded font-bold">
                   {navItem.badge}
                 </span>
               )}

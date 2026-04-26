@@ -26,12 +26,20 @@ export default function AICopilot() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Salom! I am the iABS Copilot — your AI assistant for the Uchet Arenda module. I can help you with CBU 3336 regulations, account codes, lease management rules, and more. Ask me anything!',
+      content: 'Salom! I am the iABS Copilot — your AI assistant for the iABS Demo #BuildWithAI module. I can help you with CBU 3336 regulations, account codes, lease management rules, and more. Ask me anything!',
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
+  const [cooldown, setCooldown] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setInterval(() => setCooldown(c => c - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [cooldown]);
 
   const mutation = useMutation({
     mutationFn: (message: string) => aiCopilot(message),
@@ -60,8 +68,11 @@ export default function AICopilot() {
   });
 
   const handleSend = (text?: string) => {
+    if (cooldown > 0) return;
     const msg = text || input.trim();
     if (!msg) return;
+
+    setCooldown(45); // 45 seconds cooldown
 
     setMessages((prev) => [
       ...prev,
@@ -80,7 +91,7 @@ export default function AICopilot() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-sqb-navy flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl text-white">
+            <div className="p-2 bg-sqb-navy rounded-xl text-white">
               <Sparkles size={22} />
             </div>
             {t('sidebar.copilot', 'AI Copilot')}
@@ -106,7 +117,7 @@ export default function AICopilot() {
                   className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    msg.role === 'user' ? 'bg-sqb-navy text-white' : 'bg-gradient-to-br from-violet-500 to-indigo-600 text-white'
+                    msg.role === 'user' ? 'bg-sqb-navy text-white' : 'bg-sqb-navy text-white'
                   }`}>
                     {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                   </div>
@@ -128,11 +139,11 @@ export default function AICopilot() {
 
             {mutation.isPending && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-sqb-navy text-white flex items-center justify-center">
                   <Bot size={16} />
                 </div>
                 <div className="bg-gray-50 rounded-2xl rounded-tl-md border border-gray-100 px-4 py-3">
-                  <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+                  <Loader2 className="w-4 h-4 animate-spin text-sqb-navy" />
                 </div>
               </motion.div>
             )}
@@ -144,16 +155,16 @@ export default function AICopilot() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about CBU 3336, account codes, lease rules..."
-                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-300 transition-all"
-                disabled={mutation.isPending}
+                placeholder={cooldown > 0 ? `Wait ${cooldown}s before sending next prompt...` : "Ask about CBU 3336, account codes, lease rules..."}
+                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-sqb-navy/20 focus:border-sqb-navy/30 transition-all disabled:opacity-50 disabled:bg-gray-100"
+                disabled={mutation.isPending || cooldown > 0}
               />
               <button
                 type="submit"
-                disabled={!input.trim() || mutation.isPending}
-                className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-5 py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-violet-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                disabled={!input.trim() || mutation.isPending || cooldown > 0}
+                className="bg-sqb-navy text-white px-5 py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-sqb-navy/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <Send size={16} /> Send
+                {cooldown > 0 ? <span>{cooldown}s</span> : (mutation.isPending ? <Loader2 size={16} className="animate-spin text-white" /> : <Send size={16} />)} Send
               </button>
             </form>
           </div>
@@ -170,8 +181,8 @@ export default function AICopilot() {
                 <button
                   key={i}
                   onClick={() => handleSend(q)}
-                  disabled={mutation.isPending}
-                  className="w-full text-left text-xs bg-sqb-bg hover:bg-violet-50 text-sqb-navy p-3 rounded-xl transition-colors font-medium leading-relaxed disabled:opacity-50"
+                  disabled={mutation.isPending || cooldown > 0}
+                  className="w-full text-left text-xs bg-sqb-bg hover:bg-sqb-muted text-sqb-navy p-3 rounded-xl transition-colors font-medium leading-relaxed disabled:opacity-50"
                 >
                   {q}
                 </button>
@@ -179,7 +190,7 @@ export default function AICopilot() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl p-5 text-white">
+          <div className="bg-sqb-navy rounded-2xl p-5 text-white">
             <h3 className="font-bold text-sm mb-2">💡 Pro Tip</h3>
             <p className="text-xs text-white/80 leading-relaxed">
               Ask in Russian or Uzbek for localized answers. The copilot understands CBU regulations and iABS-specific terminology.

@@ -4,7 +4,7 @@ import { Users, CreditCard, FileCheck, Search, UserPlus, BookOpen } from 'lucide
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchClients, createClient, fetchAccounts, createAccount, fetchCBURegistry, type ClientRecord, type AccountRecord, type CBURegistryEntry } from '../lib/api';
+import { fetchClients, createClient, fetchAccounts, createAccount, fetchCBURegistry, createCBUEntry, type ClientRecord, type AccountRecord, type CBURegistryEntry } from '../lib/api';
 import { useToast } from '../components/Toast';
 
 type Tab = 'clients' | 'accounts' | 'cbu_registry';
@@ -21,6 +21,8 @@ export default function Dictionaries() {
   const [clientForm, setClientForm] = useState({ code: '', name: '', subject: 'J' as 'P' | 'J', code_filial: '00450', inn: '', address: '', phone: '' });
   // Account form
   const [accountForm, setAccountForm] = useState({ client_id: '', code: '', code_filial: '00450', code_currency: '000' });
+  // CBU Registry form
+  const [cbuForm, setCbuForm] = useState({ coa_code: '', description: '', account_type: 'INCOME' as 'INCOME' | 'EXPENSE' | 'TRANSIT' });
 
   const tabs = [
     { id: 'clients' as Tab, label: t('dictionaries.clients', 'Clients'), icon: Users },
@@ -32,7 +34,7 @@ export default function Dictionaries() {
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ['clients', searchText],
     queryFn: () => fetchClients(undefined, searchText || undefined),
-    enabled: activeTab === 'clients',
+    enabled: activeTab === 'clients' || activeTab === 'accounts' || isDrawerOpen,
   });
 
   const { data: accounts = [], isLoading: accountsLoading } = useQuery({
@@ -68,17 +70,30 @@ export default function Dictionaries() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const createCBUMutation = useMutation({
+    mutationFn: createCBUEntry,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cbu-registry'] });
+      setIsDrawerOpen(false);
+      toast.success('CBU Registry entry created');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const handleSave = () => {
     if (activeTab === 'clients') {
       createClientMutation.mutate(clientForm);
     } else if (activeTab === 'accounts') {
       createAccountMutation.mutate(accountForm);
+    } else if (activeTab === 'cbu_registry') {
+      createCBUMutation.mutate(cbuForm);
     }
   };
 
   const resetForms = () => {
     setClientForm({ code: '', name: '', subject: 'J', code_filial: '00450', inn: '', address: '', phone: '' });
     setAccountForm({ client_id: '', code: '', code_filial: '00450', code_currency: '000' });
+    setCbuForm({ coa_code: '', description: '', account_type: 'INCOME' });
   };
 
   const filteredAccounts = accounts.filter((a: AccountRecord) => {
@@ -92,7 +107,7 @@ export default function Dictionaries() {
   });
 
   const isLoading = activeTab === 'clients' ? clientsLoading : activeTab === 'accounts' ? accountsLoading : cbuLoading;
-  const isMutating = createClientMutation.isPending || createAccountMutation.isPending;
+  const isMutating = createClientMutation.isPending || createAccountMutation.isPending || createCBUMutation.isPending;
 
   const accountTypeColors: Record<string, string> = {
     INCOME: 'bg-green-100 text-green-800',
@@ -131,14 +146,12 @@ export default function Dictionaries() {
               <h2 className="text-xl font-bold text-sqb-navy capitalize">{tabs.find(t => t.id === activeTab)?.label} Management</h2>
               <p className="text-xs text-sqb-grey-secondary font-medium">Standardized reference data per CBU Resolution 3336.</p>
            </div>
-           {activeTab !== 'cbu_registry' && (
-             <button
-               onClick={() => { resetForms(); setIsDrawerOpen(true); }}
-               className="sqb-btn-primary flex items-center gap-2"
-             >
-               <UserPlus size={18} /> {t('actions.add')}
-             </button>
-           )}
+           <button
+             onClick={() => { resetForms(); setIsDrawerOpen(true); }}
+             className="sqb-btn-primary flex items-center gap-2"
+           >
+             <UserPlus size={18} /> {t('actions.add')}
+           </button>
         </div>
 
         <div className="sqb-card flex-1 overflow-hidden flex flex-col">
@@ -274,7 +287,7 @@ export default function Dictionaries() {
               >
                 <div className="bg-sqb-navy p-6 text-white">
                   <h3 className="text-xl font-bold flex items-center gap-2">
-                    <UserPlus /> Add New {activeTab === 'clients' ? 'Client' : 'Account'}
+                    <UserPlus /> Add New {activeTab === 'clients' ? 'Client' : activeTab === 'accounts' ? 'Account' : 'CBU Entry'}
                   </h3>
                    <p className="text-white/60 text-xs mt-1 italic">CBU 3336 Compliant Data Entry</p>
                 </div>
@@ -353,7 +366,7 @@ export default function Dictionaries() {
                         />
                       </div>
                     </>
-                  ) : (
+                  ) : activeTab === 'accounts' ? (
                     <>
                       <div className="space-y-2">
                         <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Client</label>
@@ -400,6 +413,41 @@ export default function Dictionaries() {
                             <option value="978">EUR (978)</option>
                           </select>
                         </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">COA Code (5 Digits)</label>
+                        <input
+                          className="w-full bg-sqb-bg border-none rounded-xl p-3 font-mono outline-none focus:ring-2 focus:ring-sqb-navy/20"
+                          placeholder="e.g. 16310"
+                          maxLength={5}
+                          value={cbuForm.coa_code}
+                          onChange={(e) => setCbuForm({ ...cbuForm, coa_code: e.target.value })}
+                        />
+                        <p className="text-[10px] text-sqb-grey-secondary">Must be exactly 5 digits per CBU Resolution 3336</p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Description</label>
+                        <input
+                          className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20"
+                          placeholder="e.g. Operativ ijara daromadlari"
+                          value={cbuForm.description}
+                          onChange={(e) => setCbuForm({ ...cbuForm, description: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-sqb-navy uppercase tracking-widest">Account Type</label>
+                        <select
+                          className="w-full bg-sqb-bg border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-sqb-navy/20"
+                          value={cbuForm.account_type}
+                          onChange={(e) => setCbuForm({ ...cbuForm, account_type: e.target.value as 'INCOME' | 'EXPENSE' | 'TRANSIT' })}
+                        >
+                          <option value="INCOME">Income (Даромад)</option>
+                          <option value="EXPENSE">Expense (Харажат)</option>
+                          <option value="TRANSIT">Transit (Транзит)</option>
+                        </select>
                       </div>
                     </>
                   )}

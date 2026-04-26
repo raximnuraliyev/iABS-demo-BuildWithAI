@@ -6,12 +6,139 @@ if (!API_KEY) {
 }
 
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
-const MODEL = 'gemini-2.0-flash';
+
+// ══════════════════════════════════════════════
+// Model Fallback Chain (ordered by priority)
+// When a model hits rate limits (429), we automatically
+// try the next model in the chain.
+// ══════════════════════════════════════════════
+const MODEL_CHAIN = [
+  'gemini-2.5-flash',        // Primary: 5 RPM, 250K TPM, 20 RPD
+  'gemini-2.5-flash-lite',   // Fallback 1: 10 RPM, 250K TPM, 20 RPD
+  'gemini-3-flash',          // Fallback 2: 5 RPM, 250K TPM, 20 RPD
+  'gemini-3.1-flash-lite',   // Fallback 3: 15 RPM, 250K TPM, 500 RPD
+  'gemini-2.0-flash',        // Fallback 4: original model
+];
+
+// Track which models are temporarily blocked (rate-limited)
+const blockedModels: Map<string, number> = new Map();
+const BLOCK_DURATION_MS = 60_000; // Block a model for 60s after a 429
+
+/**
+ * Get the next available model from the chain.
+ * Skips models that are currently blocked due to recent rate limits.
+ */
+function getAvailableModel(): string {
+  const now = Date.now();
+
+  // Clean up expired blocks
+  for (const [model, blockedUntil] of blockedModels.entries()) {
+    if (now >= blockedUntil) {
+      blockedModels.delete(model);
+    }
+  }
+
+  // Find first non-blocked model
+  for (const model of MODEL_CHAIN) {
+    if (!blockedModels.has(model)) {
+      return model;
+    }
+  }
+
+  // All models blocked — return the one that unblocks soonest
+  let soonest = MODEL_CHAIN[0];
+  let soonestTime = Infinity;
+  for (const [model, blockedUntil] of blockedModels.entries()) {
+    if (blockedUntil < soonestTime) {
+      soonestTime = blockedUntil;
+      soonest = model;
+    }
+  }
+  return soonest;
+}
+
+/**
+ * Mark a model as rate-limited (blocked) for BLOCK_DURATION_MS.
+ */
+function blockModel(model: string): void {
+  blockedModels.set(model, Date.now() + BLOCK_DURATION_MS);
+  console.warn(`⚠️ Model "${model}" rate-limited, blocked for ${BLOCK_DURATION_MS / 1000}s. Falling back...`);
+}
+
+/**
+ * Check if an error is a rate limit (429) error.
+ */
+function isRateLimitError(error: any): boolean {
+  if (!error) return false;
+  const msg = (error.message || '').toLowerCase();
+  const status = error.status || error.statusCode || error.code;
+  return (
+    status === 429 ||
+    msg.includes('429') ||
+    msg.includes('rate limit') ||
+    msg.includes('resource exhausted') ||
+    msg.includes('quota') ||
+    msg.includes('too many requests')
+  );
+}
+
+/**
+ * Execute an AI generation with automatic model fallback.
+ * Tries each model in the chain until one succeeds or all are exhausted.
+ */
+async function generateWithFallback(
+  params: {
+    contents: string;
+    config?: any;
+  },
+  maxRetries: number = MODEL_CHAIN.length
+): Promise<any> {
+  if (!ai) throw new Error('AI service not configured: GOOGLE_AI_API_KEY missing');
+
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const model = getAvailableModel();
+
+    try {
+      console.log(`🤖 AI request using model: ${model} (attempt ${attempt + 1}/${maxRetries})`);
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: params.contents,
+        config: params.config,
+      });
+
+      // Success — log which model was used
+      if (attempt > 0) {
+        console.log(`✅ Fallback successful: completed with model "${model}"`);
+      }
+
+      return response;
+    } catch (error: any) {
+      lastError = error;
+
+      if (isRateLimitError(error)) {
+        blockModel(model);
+        // Continue to the next iteration which will pick the next available model
+        continue;
+      }
+
+      // Non-rate-limit error — don't retry, throw immediately
+      throw error;
+    }
+  }
+
+  // All models exhausted
+  throw new Error(
+    `All AI models are rate-limited. Please wait a moment and try again. Last error: ${lastError?.message || 'Unknown'}`
+  );
+}
 
 // ══════════════════════════════════════════════
 // System context for the Copilot
 // ══════════════════════════════════════════════
-const COPILOT_SYSTEM_PROMPT = `You are an expert assistant for the iABS Core Banking System, specifically the "Uchet Arenda" (Lease Management) module deployed at SQB Bank, Uzbekistan.
+const COPILOT_SYSTEM_PROMPT = `You are an expert assistant for the iABS Core Banking System, specifically the "iABS Demo #BuildWithAI" (Lease Management) module deployed at SQB Bank, Uzbekistan.
 
 Your knowledge includes:
 1. **CBU Resolution 3336** (Markaziy Bank, 26.11.2021) - Chart of Accounts for commercial banks:
@@ -94,10 +221,7 @@ export class AIService {
    * Copilot: Contextual help assistant for iABS users
    */
   async copilot(userMessage: string): Promise<string> {
-    if (!ai) throw new Error('AI service not configured: GOOGLE_AI_API_KEY missing');
-
-    const response = await ai.models.generateContent({
-      model: MODEL,
+    const response = await generateWithFallback({
       contents: userMessage,
       config: {
         systemInstruction: COPILOT_SYSTEM_PROMPT,
@@ -113,10 +237,7 @@ export class AIService {
    * Matchmaker: Natural language → structured JSON for real estate matching
    */
   async matchmaker(prompt: string): Promise<{ query: any; results: any[] }> {
-    if (!ai) throw new Error('AI service not configured: GOOGLE_AI_API_KEY missing');
-
-    const response = await ai.models.generateContent({
-      model: MODEL,
+    const response = await generateWithFallback({
       contents: `Extract property requirements from this request and return a JSON object with these fields: city, min_sqm, max_sqm, budget_min, budget_max, currency, property_type, features (array). Request: "${prompt}"`,
       config: {
         responseMimeType: 'application/json',
@@ -136,10 +257,7 @@ export class AIService {
    * Text-to-SQL Analytics: Natural language → SQL → data for charting
    */
   async analytics(userQuery: string): Promise<{ sql: string; data: any[] }> {
-    if (!ai) throw new Error('AI service not configured: GOOGLE_AI_API_KEY missing');
-
-    const response = await ai.models.generateContent({
-      model: MODEL,
+    const response = await generateWithFallback({
       contents: userQuery,
       config: {
         systemInstruction: LEASE_SCHEMA_PROMPT,
@@ -175,6 +293,23 @@ export class AIService {
       console.error('SQL Execution error:', e);
       throw new Error(`Failed to execute query: ${e.message}`);
     }
+  }
+
+  /**
+   * Get the current status of model availability (for diagnostics)
+   */
+  getModelStatus(): { chain: string[]; blocked: Record<string, number>; active: string } {
+    const now = Date.now();
+    const blocked: Record<string, number> = {};
+    for (const [model, blockedUntil] of blockedModels.entries()) {
+      const remaining = Math.max(0, Math.ceil((blockedUntil - now) / 1000));
+      if (remaining > 0) blocked[model] = remaining;
+    }
+    return {
+      chain: MODEL_CHAIN,
+      blocked,
+      active: getAvailableModel(),
+    };
   }
 }
 

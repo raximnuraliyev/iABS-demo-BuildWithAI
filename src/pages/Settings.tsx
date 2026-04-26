@@ -221,7 +221,7 @@ export default function Settings() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { label: 'Application', value: 'SQB iABS Uchet Arenda' },
+              { label: 'Application', value: 'SQB iABS Demo #BuildWithAI' },
               { label: 'Version', value: 'v2.0.0' },
               { label: 'Environment', value: 'Production' },
               { label: 'Database', value: 'PostgreSQL 15' },

@@ -1,5 +1,6 @@
 import { LeaseRepository } from '../repositories/lease.repository';
 import { LeaseStatus, LeaseType, Prisma } from '@prisma/client';
+import prisma from '../prismaClient';
 
 export class LeaseService {
   private repository: LeaseRepository;
@@ -21,10 +22,54 @@ export class LeaseService {
     return lease;
   }
 
-  async createLease(data: Prisma.LeaseUncheckedCreateInput) {
+  /**
+   * Helper: get or create a "BANK" client record that represents the bank itself.
+   * This is needed because both tenant_id and lessor_id are required by the schema.
+   */
+  private async getBankClientId(): Promise<string> {
+    const bankInn = '000000000'; // Reserved INN for the bank
+    let bankClient = await prisma.client.findUnique({ where: { inn: bankInn } });
+    if (!bankClient) {
+      bankClient = await prisma.client.create({
+        data: {
+          code: 'BANK-SQB',
+          name: 'SQB Bank (Self)',
+          subject: 'J',
+          code_filial: '00000',
+          inn: bankInn,
+          address: 'Head Office',
+          phone: '',
+          condition: true,
+        },
+      });
+    }
+    return bankClient.id;
+  }
+
+  async createLease(data: any) {
     // Force INTRODUCED status on creation
     data.status = LeaseStatus.INTRODUCED;
-    return this.repository.create(data);
+
+    // Ensure both tenant_id and lessor_id are present.
+    // For OUTBOUND (bank rents out): bank = lessor, client = tenant
+    // For INBOUND (bank rents in): bank = tenant, client = lessor
+    if (data.type === 'OUTBOUND') {
+      if (!data.tenant_id) {
+        throw new Error('Tenant is required for outbound leases');
+      }
+      if (!data.lessor_id) {
+        data.lessor_id = await this.getBankClientId();
+      }
+    } else if (data.type === 'INBOUND') {
+      if (!data.lessor_id) {
+        throw new Error('Lessor is required for inbound leases');
+      }
+      if (!data.tenant_id) {
+        data.tenant_id = await this.getBankClientId();
+      }
+    }
+
+    return this.repository.create(data as Prisma.LeaseUncheckedCreateInput);
   }
 
   async updateLease(id: string, data: any) {
@@ -115,16 +160,16 @@ export class LeaseService {
       return {
         success: true,
         payment_mode: mode,
-        memo_order: result.memoOrder,
+        memo_order: result,
       };
     } else {
       // SCHEDULED: queue for next Monday 09:00 AM
       const scheduledRecord = await this.repository.schedulePayment(id, Number(lease.amount));
-      console.log(`Scheduled payment for lease ${id} on ${scheduledRecord.scheduled_date}`);
+      console.log(`Scheduled payment for lease ${id}`);
       return {
         success: true,
         payment_mode: mode,
-        message: `Payment scheduled for ${scheduledRecord.scheduled_date.toISOString()} processing`,
+        message: `Payment scheduled processing`,
       };
     }
   }

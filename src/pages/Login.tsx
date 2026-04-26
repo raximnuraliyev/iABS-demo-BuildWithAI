@@ -55,7 +55,7 @@ export default function Login() {
             </div>
             <div>
               <h1 className="text-white text-3xl font-extrabold tracking-tight leading-none">SQB</h1>
-              <p className="text-white/40 text-[10px] uppercase tracking-[0.25em] font-bold">iABS UCHET ARENDA</p>
+              <p className="text-white/40 text-[10px] uppercase tracking-[0.25em] font-bold">iABS Demo #BuildWithAI</p>
             </div>
           </div>
           <p className="text-white/50 text-sm">Lease Management System</p>

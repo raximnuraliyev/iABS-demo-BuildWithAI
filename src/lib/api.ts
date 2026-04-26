@@ -119,6 +119,10 @@ export function fetchCBURegistry(): Promise<CBURegistryEntry[]> {
   return apiFetch('/cbu-registry');
 }
 
+export function createCBUEntry(data: { coa_code: string; description: string; account_type: string }) {
+  return apiFetch('/cbu-registry', { method: 'POST', body: JSON.stringify(data) });
+}
+
 // ── Leases ──
 export interface LeaseRecord {
   id: string;

@@ -5,7 +5,7 @@ import { DataTable } from '../components/DataTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { cn } from '../lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchLeases, payLease, type LeaseRecord } from '../lib/api';
+import { fetchLeases, createLease, approveLease, returnLease, payLease, type LeaseRecord } from '../lib/api';
 import { PaymentModal } from '../components/PaymentModal';
 import { useToast } from '../components/Toast';
 import { exportToCSV, exportToPDF } from '../lib/export';
@@ -28,15 +28,7 @@ export default function InboundLeases() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => 
-      fetch('/api/v1/leases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(res => {
-        if (!res.ok) throw new Error('Failed to create lease');
-        return res.json();
-      }),
+    mutationFn: createLease,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leases'] });
       setIsLeaseFormOpen(false);
@@ -45,16 +37,24 @@ export default function InboundLeases() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'APPROVED' | 'RETURNED' }) => 
-      fetch(`/api/v1/leases/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      }).then(res => res.json()),
+  const approveMutation = useMutation({
+    mutationFn: approveLease,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leases'] });
-      toast.success('Status updated');
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setSelectedRow(null);
+      toast.success('Lease approved');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const returnMutation = useMutation({
+    mutationFn: returnLease,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leases'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setSelectedRow(null);
+      toast.success('Lease returned');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -143,7 +143,7 @@ export default function InboundLeases() {
               className="sqb-btn-secondary flex items-center gap-2 border-green-600 text-green-700 hover:bg-green-50"
               onClick={() => {
                 if (selectedLease) {
-                  updateStatusMutation.mutate({ id: selectedLease.id, status: 'APPROVED' });
+                  approveMutation.mutate(selectedLease.id);
                 }
               }}
             >
@@ -155,7 +155,7 @@ export default function InboundLeases() {
               className="sqb-btn-secondary flex items-center gap-2 border-red-600 text-red-700 hover:bg-red-50"
               onClick={() => {
                 if (selectedLease) {
-                  updateStatusMutation.mutate({ id: selectedLease.id, status: 'RETURNED' });
+                  returnMutation.mutate(selectedLease.id);
                 }
               }}
             >

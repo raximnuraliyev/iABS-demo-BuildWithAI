@@ -85,9 +85,9 @@ export default function Dashboard() {
   };
 
   const aiCards = [
-    { to: '/ai-copilot', icon: Sparkles, title: 'AI Copilot', desc: 'Ask about CBU 3336 rules', gradient: 'from-violet-500 to-indigo-600' },
-    { to: '/analytics', icon: BarChart3, title: 'AI Analytics', desc: 'Natural language queries', gradient: 'from-amber-500 to-orange-600' },
-    { to: '/matchmaker', icon: Building, title: 'Matchmaker', desc: 'Property search with AI', gradient: 'from-emerald-500 to-teal-600' },
+    { to: '/ai-copilot', icon: Sparkles, title: 'AI Copilot', desc: 'Ask about CBU 3336 rules', gradient: 'from-sqb-navy to-[#002244]' },
+    { to: '/analytics', icon: BarChart3, title: 'AI Analytics', desc: 'Natural language queries', gradient: 'from-sqb-red to-red-800' },
+    { to: '/matchmaker', icon: Building, title: 'Matchmaker', desc: 'Property search with AI', gradient: 'from-slate-800 to-slate-900' },
   ];
 
   return (
@@ -138,7 +138,7 @@ export default function Dashboard() {
       </div>
 
       <div id="bottom-grid" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div id="activity-feed" className="lg:col-span-1 space-y-6">
+        <div id="activity-feed" className="lg:col-span-1 space-y-4">
           <div className="flex items-center justify-between">
              <h2 className="text-lg font-bold flex items-center gap-2">
               <History className="w-5 h-5 text-sqb-navy" />
@@ -147,35 +147,35 @@ export default function Dashboard() {
             <Link to="/activity" className="text-xs font-bold text-sqb-navy hover:underline">View All →</Link>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5 max-h-[320px] overflow-y-auto">
             {isLoading ? (
-              <div className="text-center py-8 text-gray-400 text-sm">Loading activity...</div>
+              <div className="text-center py-6 text-gray-400 text-sm">Loading activity...</div>
             ) : recentActivity.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm">No recent activity.</div>
+              <div className="text-center py-6 text-gray-400 text-sm">No recent activity.</div>
             ) : (
-              recentActivity.slice(0, 5).map((activity: any, idx: number) => (
+              recentActivity.slice(0, 4).map((activity: any, idx: number) => (
                 <motion.div
                   key={activity.id || idx}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: (idx * 0.05) + 0.3 }}
-                  className="group relative flex gap-4 p-4 rounded-xl hover:bg-white transition-all border border-transparent hover:border-gray-100 hover:shadow-sm"
+                  className="group relative flex gap-3 p-3 rounded-xl hover:bg-white transition-all border border-transparent hover:border-gray-100 hover:shadow-sm"
                 >
                   <div className="flex flex-col items-center">
-                    <div className="w-8 h-8 rounded-full bg-sqb-bg flex items-center justify-center border-2 border-white ring-1 ring-gray-100 mb-1 z-10 group-hover:bg-sqb-navy group-hover:text-white transition-colors">
-                      {activity.action?.includes('APPROVE') ? <CheckCircle2 className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                    <div className="w-7 h-7 rounded-full bg-sqb-bg flex items-center justify-center border-2 border-white ring-1 ring-gray-100 mb-1 z-10 group-hover:bg-sqb-navy group-hover:text-white transition-colors">
+                      {activity.action?.includes('APPROVE') ? <CheckCircle2 className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
                     </div>
-                    {idx !== Math.min(recentActivity.length, 5) - 1 && <div className="w-[1px] h-full bg-gray-200" />}
+                    {idx !== Math.min(recentActivity.length, 4) - 1 && <div className="w-[1px] h-full bg-gray-200" />}
                   </div>
-                  <div className="flex-1 pb-4">
-                    <div className="flex justify-between items-start mb-1">
+                  <div className="flex-1 pb-2">
+                    <div className="flex justify-between items-start mb-0.5">
                       <p className="text-sm font-bold text-sqb-navy">{activity.tabel_id || 'System'}</p>
                       <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded uppercase">{formatActivityTime(activity.timestamp)}</span>
                     </div>
                     <p className="text-xs text-sqb-grey-secondary">
                       {activity.action?.replace(/_/g, ' ')} <span className="font-bold text-sqb-navy">{activity.entity}</span>
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-2 font-medium">{formatActivityDate(activity.timestamp)}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 font-medium">{formatActivityDate(activity.timestamp)}</p>
                   </div>
                 </motion.div>
               ))
