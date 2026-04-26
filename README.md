@@ -186,32 +186,128 @@ Role-based access control with User Management, Permission Matrix, and System In
 
 ## Technical Architecture
 
-Built to map seamlessly to the iABS N-Tier architecture:
+### iABS Uchet Arenda System Architecture
 
-```
-+-------------------+     +-------------------+     +-------------------+
-|    Frontend        |     |     Backend        |     |    Database        |
-|                   |     |                   |     |                   |
-|  React 19 + Vite  | --> |  Express.js API   | --> |  PostgreSQL 15    |
-|  TypeScript       |     |  Controllers      |     |  Prisma ORM       |
-|  Tailwind CSS v4  |     |  Services         |     |  ACID Compliant   |
-|  TanStack Query   |     |  Repositories     |     |  Audit Logs       |
-|  React Hook Form  |     |  Middlewares      |     |  Memo Orders      |
-|  Recharts         |     |  (Auth, RBAC,     |     |                   |
-|  Motion (Framer)  |     |   Audit, CSRF)    |     |                   |
-|  i18next (EN/RU/UZ)|    |                   |     |                   |
-+-------------------+     +------- |-----------+     +-------------------+
-                                   |
-                           +-------|--------+
-                           |  Google Gemini  |
-                           |  AI Engine      |
-                           |  @google/genai  |
-                           |  Multi-model    |
-                           |  Fallback Chain |
-                           +----------------+
+The module is built as a five-layer enterprise system designed to map seamlessly to the iABS N-Tier architecture:
+
+<div align="center">
+  <img src="screenshots/iABS Uchet Arenda module - visual selection.png" alt="iABS Uchet Arenda System Architecture" width="700" />
+</div>
+
+<br/>
+
+```mermaid
+mindmap
+  root((iABS Uchet<br/>Arenda System))
+    Database Layer
+      PostgreSQL 15
+      Prisma ORM
+      Leases
+      Dictionaries
+      Memo Orders
+      ACID Compliance
+    Frontend Layer
+      React 19
+      Vite
+      Tailwind CSS
+      TanStack Query
+    AI Integration Layer
+      Google GenAI
+      Multi-Model Fallback Chain
+      AI Copilot
+      Analytics
+      Real Estate Matchmaker
+    Security & Middleware Layer
+      Nginx Reverse Proxy
+      Node.js Middlewares
+      JWT Authentication
+      Anti-CSRF Token Validation
+      Immutable Audit Logging
+    Backend Application Layer
+      Express.js API
+      N-Tier Architecture
+      Controllers
+      Services
+      Repositories
 ```
 
-**Stack breakdown:**
+### Entity-Relationship Diagram
+
+<div align="center">
+  <img src="screenshots/erDiagram.drawio.png" alt="Entity-Relationship Diagram" width="900" />
+</div>
+
+<br/>
+
+```mermaid
+erDiagram
+    USER {
+        uuid id PK
+        string tabel_id UK
+        string password_hash
+        string role "Admin, Controller, Operator"
+    }
+
+    CLIENT {
+        uuid id PK
+        string code UK
+        string name
+        string subject "P (Physical), J (Juridical)"
+        string inn UK
+        string code_filial
+    }
+
+    ACCOUNT {
+        uuid id PK
+        uuid client_id FK
+        string code_20_digit UK
+        string code_coa_5_digit FK
+        string currency
+    }
+
+    CBU_REGISTRY {
+        string coa_code_5_digit PK
+        string description
+        string account_type "INCOME, EXPENSE, TRANSIT"
+    }
+
+    LEASE {
+        uuid id PK
+        string type "INBOUND, OUTBOUND"
+        string status "INTRODUCED, APPROVED, RETURNED"
+        decimal amount
+        uuid tenant_id FK
+        uuid lessor_id FK
+        string transit_account_20
+        string income_expense_account_20
+    }
+
+    MEMO_ORDER {
+        uuid id PK
+        uuid lease_id FK
+        string debit_account_20
+        string credit_account_20
+        decimal amount
+        datetime execution_date
+    }
+
+    AUDIT_LOG {
+        uuid id PK
+        string tabel_id FK
+        string action
+        string target_entity
+        json payload
+        datetime timestamp
+    }
+
+    CLIENT ||--o{ ACCOUNT : "owns"
+    CBU_REGISTRY ||--o{ ACCOUNT : "validates"
+    CLIENT ||--o{ LEASE : "acts as tenant/lessor"
+    LEASE ||--o{ MEMO_ORDER : "generates upon approval"
+    USER ||--o{ AUDIT_LOG : "performs actions tracked in"
+```
+
+### Stack Breakdown
 
 | Layer | Technology |
 |-------|-----------|
